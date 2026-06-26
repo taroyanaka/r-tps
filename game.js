@@ -1,10 +1,10 @@
-// --- パラメータシステム ---
-        // URLクエリからパラメータ名を取得
+// --- Parameter system ---
+        // Read the parameter name from the URL query string
         const _urlParams = new URLSearchParams(window.location.search);
         const _paramName = _urlParams.get('param') || null;
         const _autoStart = _urlParams.get('mode') === 'auto';
 
-        // デフォルト値（param.txtの1行目と同期）
+        // Default values synced with the first row of param.txt
         const PARAMS = {
             paramName: 'default',
             playerHp: 80,
@@ -19,7 +19,7 @@
             enemyDamageMult: 1.0
         };
 
-        // ローカル直開き時は param-data.js から、サーバー起動時は /params から取得して上書き
+        // Load from param-data.js when opened locally, or fetch /params when served.
         async function loadParams() {
             if (_paramName && Array.isArray(window.PARAM_CONFIGS)) {
                 const config = window.PARAM_CONFIGS.find(c => c.paramName === _paramName);
@@ -30,9 +30,9 @@
                             PARAMS[key] = isNaN(raw) ? raw : Number(raw);
                         }
                     }
-                    console.log(`[PARAM] ローカル設定を適用: ${_paramName}`);
+                    console.log(`[PARAM] Applied local settings: ${_paramName}`);
                 } else {
-                    console.log(`[PARAM] 設定が見つかりません: ${_paramName}`);
+                    console.log(`[PARAM] Settings not found: ${_paramName}`);
                 }
                 return;
             }
@@ -49,24 +49,24 @@
                                 PARAMS[key] = isNaN(raw) ? raw : Number(raw);
                             }
                         }
-                        console.log(`[PARAM] レギュレーション適用: ${_paramName}`);
+                        console.log(`[PARAM] Applied regulation set: ${_paramName}`);
                     } else {
-                        console.log(`[PARAM] 設定が見つかりません: ${_paramName}`);
+                        console.log(`[PARAM] Settings not found: ${_paramName}`);
                     }
                 } catch(e) {
-                    console.log(`[PARAM] パラメータ読み込みエラー: ${e}`);
+                    console.log(`[PARAM] Parameter load error: ${e}`);
                 }
             }
         }
 
-        // --- ゲーム状態変数 ---
+        // --- Game state variables ---
         let gameState = 'start'; // start, map, battle, reward, camp, shop, gameover, victory, battle_end
         let currentStage = 1; 
         const totalStages = 8;
         let selectedNode = null;
-        let isAutoMode = false; // オートモードフラグ
+        let isAutoMode = false; // Auto mode flag
 
-        // プレイヤーデータ
+        // Player data
         const player = {
             hp: 80,
             maxHp: 80,
@@ -78,7 +78,7 @@
             damageMult: 1.0 
         };
 
-        // バトル中の一時状態
+        // Temporary battle state
         const battleState = {
             drawPile: [],
             hand: [],
@@ -91,34 +91,34 @@
             invulnTimer: 0 
         };
 
-        // カードライブラリ
+        // Card library
         const CARDS = {
-            strike: { id: 'strike', name: 'ストライク', cost: 1, type: 'attack', text: 'シアンレーザーを 3連射 して各 6ダメージ。', colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20' },
-            shotgun: { id: 'shotgun', name: '散弾ショット', cost: 2, type: 'attack', text: '近距離に 8発 の拡散弾。至近距離で壊滅的ダメージ。', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
-            defend: { id: 'defend', name: '防御シールド', cost: 1, type: 'defense', text: 'ブロックを +10 獲得。プレイヤー周囲に電磁ドーム展開。', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
-            dodge: { id: 'dodge', name: 'ドッジパルス', cost: 1, type: 'skill', text: '向いている方向へ高速ダッシュ。0.5秒の無敵。1枚ドロー。', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
-            poison: { id: 'poison', name: 'アシッドガス', cost: 2, type: 'skill', text: '毒ガス弾を射出。着弾地点に敵を侵食する緑ドームを形成。', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
-            limit: { id: 'limit', name: '限界突破', cost: 3, type: 'power', text: '戦闘終了まで、全カードの与ダメージを +100%。', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' }
+            strike: { id: 'strike', name: 'Strike', cost: 1, type: 'attack', text: 'Fire a cyan laser 3 times for 6 damage each.', colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20' },
+            shotgun: { id: 'shotgun', name: 'Shotgun Burst', cost: 2, type: 'attack', text: 'Fire 8 spread shots at close range. Devastating damage up close.', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
+            defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
+            dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
+            poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
+            limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' }
         };
 
-        // アップグレード差分
+        // Upgrade variants
         const UPGRADES = {
-            strike: { name: 'ストライク+', text: 'シアンレーザーを 3連射。各 10ダメージ。' },
-            shotgun: { name: '散弾ショット+', cost: 1, text: '低コスト。近距離に 8発 の拡散弾。' },
-            defend: { name: '防御シールド+', text: 'ブロックを +16 獲得。' },
-            dodge: { name: 'ドッジパルス+', cost: 0, text: 'ノーコスト。ダッシュ、無敵。1枚ドロー。' },
-            poison: { name: 'アシッドガス+', text: 'より高威力の毒ガス。着弾地点を強力に侵食。' },
-            limit: { name: '限界突破+', cost: 2, text: '低コスト。全カードの与ダメージを +100%。' }
+            strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
+            shotgun: { name: 'Shotgun Burst+', cost: 1, text: 'Low cost. Fire 8 spread shots at close range.' },
+            defend: { name: 'Defense Shield+', text: 'Gain +16 block.' },
+            dodge: { name: 'Dodge Pulse+', cost: 0, text: 'No cost. Dash, invulnerable. Draw 1 card.' },
+            poison: { name: 'Acid Gas+', text: 'A stronger poison gas attack. Severely corrodes the impact area.' },
+            limit: { name: 'Limit Break+', cost: 2, text: 'Low cost. Increase all card damage by +100%.' }
         };
 
-        // --- 3Dグラフィック環境変数 (Three.js) ---
+        // --- 3D graphics state (Three.js) ---
         let scene, camera, renderer;
         let playerMesh;
         let terrainGrid;
         let ambientLight, dirLight;
         const keys = {}; 
 
-        // 視点移動
+        // View controls
         let mouseX = 0, mouseY = 0;
         let cameraTargetPitch = 0.2; 
         let cameraTargetYaw = 0;   
@@ -126,20 +126,20 @@
         let isMouseDown = false;   
         let isFiring = false; 
         let normalShootCooldown = 0; 
-        let warningLineMesh = null; // 敵の警告射線
+        let warningLineMesh = null; // Enemy warning line
 
-        // --- 起動初期化 ---
+        // --- Startup initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
             await loadParams();
 
-            // PARAMSをプレイヤー初期値に反映
+            // Apply PARAMS to the player defaults
             player.hp = PARAMS.playerHp;
             player.maxHp = PARAMS.playerMaxHp;
             player.energy = PARAMS.playerEnergy;
             player.maxEnergy = PARAMS.playerMaxEnergy;
             player.gold = PARAMS.playerGold;
 
-            // オートスタートフラグ
+            // Auto-start flag
             if (_autoStart) {
                 isAutoMode = true;
             }
@@ -153,11 +153,11 @@
                 showPanel('start');
             }
 
-            // キーハンドラ
+            // Keyboard handlers
             window.addEventListener('keydown', (e) => {
                 keys[e.key.toLowerCase()] = true;
                 
-                // Pキーでのマニュアル/オートトグル
+                // Toggle manual / auto mode with the P key
                 if (e.key.toLowerCase() === 'p') {
                     toggleAutoMode();
                 }
@@ -173,7 +173,7 @@
                 keys[e.key.toLowerCase()] = false;
             });
 
-            // マウス操作
+            // Mouse controls
             window.addEventListener('mousedown', (e) => {
                 isMouseDown = true;
                 if (gameState === 'battle') {
@@ -208,35 +208,35 @@
                 }
             });
 
-            // ループスタート
+            // Start the main loop
             requestAnimationFrame(gameLoop);
         });
 
-        // --- オートモードトグル処理 ---
+        // --- Auto mode toggle ---
         function toggleAutoMode() {
             isAutoMode = !isAutoMode;
-            console.log(`[DEBUG-MODE] モード切替: ${isAutoMode ? "AUTO (自動戦闘)" : "MANUAL (手動移動)"}`);
-            showToast(isAutoMode ? "オート戦闘起動：敵のHPが 1/10 に縮小" : "マニュアル戦闘：敵のHPが標準に復元");
+            console.log(`[DEBUG-MODE] Mode switch: ${isAutoMode ? "AUTO (automated battle)" : "MANUAL (manual control)"}`);
+            showToast(isAutoMode ? "Auto battle enabled: enemy HP reduced to 1/10." : "Manual battle enabled: enemy HP restored to normal.");
 
-            // 戦闘中の場合、敵のHPと最大HPを動的にスケーリング
+            // In battle, scale enemy HP dynamically.
             if (gameState === 'battle' && battleState.enemies) {
                 battleState.enemies.forEach(enemy => {
                     if (isAutoMode) {
-                        // HPを1/10にする
+                        // Reduce HP to 1/10
                         enemy.userData.hp = Math.max(1, enemy.userData.hp / 10);
                         enemy.userData.maxHp = Math.max(1, enemy.userData.maxHp / 10);
-                        console.log(`[DEBUG-AI] 敵弱体化 (HP1/10): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
+                        console.log(`[DEBUG-AI] Enemy weakened (HP 1/10): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
                     } else {
-                        // HPを10倍に戻す
+                        // Restore HP by 10x
                         enemy.userData.hp *= 10;
                         enemy.userData.maxHp *= 10;
-                        console.log(`[DEBUG-AI] 敵HP復元 (10倍): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
+                        console.log(`[DEBUG-AI] Enemy HP restored (10x): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
                     }
                     updateEnemyIntentUI(enemy);
                 });
             }
 
-            // マウス固定をオートモード時は不要なので解除
+            // Release pointer lock in auto mode
             if (isAutoMode && document.pointerLockElement === renderer.domElement) {
                 try {
                     document.exitPointerLock();
@@ -248,7 +248,7 @@
             updateModeIndicator();
         }
 
-        // モードインジケーターの視覚的アップデート
+        // Update the mode indicator visuals
         function updateModeIndicator() {
             const indicator = document.getElementById('mode-indicator');
             if (indicator) {
@@ -262,7 +262,7 @@
             }
         }
 
-        // --- デッキ初期設定 ---
+        // --- Initial deck setup ---
         function setupInitialDeck() {
             player.deck = [
                 { ...CARDS.strike, upgraded: false },
@@ -279,7 +279,7 @@
             updateTopBarUI();
         }
 
-        // --- 3D 初期セットアップ ---
+        // --- 3D setup ---
         function initThree() {
             const container = document.getElementById('game-canvas');
             scene = new THREE.Scene();
@@ -291,7 +291,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-            // ライト
+            // Lighting
             ambientLight = new THREE.AmbientLight(0x0f0a20, 1.5);
             scene.add(ambientLight);
 
@@ -299,7 +299,7 @@
             dirLight.position.set(20, 40, 20);
             scene.add(dirLight);
 
-            // 地面
+            // Ground
             const floorGeo = new THREE.PlaneGeometry(100, 100, 20, 20);
             const floorMat = new THREE.MeshBasicMaterial({
                 color: 0xec4899,
@@ -312,7 +312,7 @@
             floor.position.y = 0;
             scene.add(floor);
 
-            // 境界の外壁
+            // Boundary walls
             const wallGeo = new THREE.BoxGeometry(100, 15, 100);
             const wallEdges = new THREE.EdgesGeometry(wallGeo);
             const wallLine = new THREE.LineSegments(wallEdges, new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.1 }));
@@ -331,7 +331,7 @@
         function createPlayerAvatar() {
             const group = new THREE.Group();
 
-            // 頭
+            // Head
             const headGeo = new THREE.OctahedronGeometry(0.5);
             const edgesGeo = new THREE.EdgesGeometry(headGeo);
             const headLine = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0x06b6d4, linewidth: 2 }));
@@ -339,7 +339,7 @@
             group.add(headLine);
             group.add(headCore);
 
-            // ボディ
+            // Body
             const bodyGeo = new THREE.ConeGeometry(0.6, 1.5, 4);
             const bodyEdges = new THREE.EdgesGeometry(bodyGeo);
             const bodyLine = new THREE.LineSegments(bodyEdges, new THREE.LineBasicMaterial({ color: 0x3b82f6 }));
@@ -349,7 +349,7 @@
             group.add(bodyLine);
             group.add(bodyCore);
 
-            // スラスター
+            // Thruster
             const thrustGeo = new THREE.BoxGeometry(0.3, 0.4, 0.3);
             const thrust = new THREE.Mesh(thrustGeo, new THREE.MeshBasicMaterial({ color: 0xec4899 }));
             thrust.position.set(0, -1.8, -0.3);
@@ -366,7 +366,7 @@
             };
         }
 
-        // --- UI表示切り替え & 画面構築 ---
+        // --- UI switching and screen construction ---
         function showPanel(panelType) {
             console.log(`[DEBUG-PANEL] showPanel: ${panelType}`);
             gameState = panelType;
@@ -374,7 +374,7 @@
             const battleTray = document.getElementById('battle-tray');
             const reticle = document.getElementById('reticle');
 
-            // 描画初期化
+            // Initialize rendering state
             panel.innerHTML = '';
             battleTray.classList.add('translate-y-32');
             battleTray.classList.add('pointer-events-none');
@@ -384,7 +384,7 @@
                 const temp = document.getElementById('temp-start-screen').cloneNode(true);
                 temp.removeAttribute('id');
                 panel.appendChild(temp);
-                // param.txtのレギュレーション一覧を動的に描画
+                // Render the param.txt regulations list dynamically
                 setTimeout(() => {
                     if (typeof window._renderParamTestButtons === 'function') {
                         window._renderParamTestButtons();
@@ -426,7 +426,7 @@
                 
                 const stageText = temp.querySelector('#gameover-stage');
                 if (stageText) {
-                    stageText.textContent = `セクター ${currentStage}`;
+                    stageText.textContent = `Sector ${currentStage}`;
                 }
             }
             else if (panelType === 'victory') {
@@ -478,11 +478,11 @@
             document.getElementById('player-hp-text').textContent = `${Math.ceil(player.hp)}/${player.maxHp}`;
             document.getElementById('player-block').textContent = Math.ceil(player.shield);
             document.getElementById('player-gold').textContent = player.gold;
-            document.getElementById('player-deck-size').textContent = `${player.deck.length}枚`;
-            document.getElementById('current-stage-text').textContent = `階層 ${currentStage} / ${totalStages}`;
+            document.getElementById('player-deck-size').textContent = `${player.deck.length} cards`;
+            document.getElementById('current-stage-text').textContent = `Stage ${currentStage} / ${totalStages}`;
         }
 
-        // --- マップ構築システム ---
+        // --- Map generation system ---
         function renderMapNodes(panelElement) {
             const container = panelElement.querySelector('#map-nodes-container');
             if (!container) return;
@@ -548,7 +548,7 @@
             selectedNode = node;
             document.getElementById('current-node-name').textContent = node.label;
             
-            showCurtain(`セクター接続中...`, () => {
+            showCurtain(`Connecting sector...`, () => {
                 if (node.type === 'fight' || node.type === 'elite' || node.type === 'boss' || node.type === 'start') {
                     showPanel('battle');
                 } else if (node.type === 'camp') {
@@ -559,7 +559,7 @@
             });
         }
 
-        // --- ショップシステム ---
+        // --- Shop system ---
         function renderShopItems(panelElement) {
             const container = panelElement.querySelector('#shop-items-container');
             if (!container) return;
@@ -570,7 +570,7 @@
                 { card: { ...CARDS[cardIds[Math.floor(Math.random() * cardIds.length)]], upgraded: false }, cost: 40 },
                 { card: { ...CARDS[cardIds[Math.floor(Math.random() * cardIds.length)]], upgraded: Math.random() > 0.6 }, cost: 65 },
                 { card: { ...CARDS.dodge, upgraded: false }, cost: 45 },
-                { card: null, type: 'heal', cost: 25, label: 'フルシステム修復パッチ', desc: 'HPを最大値まで回復します。' }
+                { card: null, type: 'heal', cost: 25, label: 'Full System Repair Patch', desc: 'Restore HP to the maximum.' }
             ];
 
             shopPool.forEach((item, idx) => {
@@ -598,7 +598,7 @@
                             class="flex flex-col items-center justify-center p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 transition-all w-20 flex-shrink-0"
                             ${player.gold < item.cost ? 'disabled' : ''}>
                         <span class="text-xs ${costColor} font-bold font-mono"><i class="fa-solid fa-coins mr-1"></i>${item.cost}</span>
-                        <span class="text-[9px] text-gray-300 mt-1 font-bold">購入</span>
+                        <span class="text-[9px] text-gray-300 mt-1 font-bold">Buy</span>
                     </button>
                 `;
 
@@ -629,7 +629,7 @@
             }
         };
 
-        // --- キャンプシステム ---
+        // --- Camp system ---
         window.campHeal = function() {
             const healAmt = Math.floor(player.maxHp * 0.3);
             player.hp = Math.min(player.maxHp, player.hp + healAmt);
@@ -669,7 +669,7 @@
             });
 
             if (listContainer.children.length === 0) {
-                listContainer.innerHTML = `<p class="text-xs text-gray-500 col-span-2 text-center py-4">アップグレード可能なカードがありません</p>`;
+                listContainer.innerHTML = `<p class="text-xs text-gray-500 col-span-2 text-center py-4">No cards are available for upgrade.</p>`;
             }
         };
 
@@ -693,7 +693,7 @@
             showPanel('camp');
         };
 
-        // --- ドラフト報酬システム ---
+        // --- Draft reward system ---
         function setupRewardScreen(panelElement) {
             const rewardGold = 25 + Math.floor(Math.random() * 15);
             player.gold += rewardGold;
@@ -745,7 +745,7 @@
                     </div>
 
                     <div class="border-t border-white/5 pt-2 flex justify-between items-center mt-auto">
-                        <span class="text-[9px] text-gray-400">最適化モジュール</span>
+                        <span class="text-[9px] text-gray-400">Optimization module</span>
                         <i class="fa-solid fa-microchip text-xs text-white/40 group-hover:text-white transition-colors"></i>
                     </div>
                 `;
@@ -793,9 +793,9 @@
             }, 800);
         }
 
-        // --- バトルフェーズ・システム (リアルタイム3D TPS) ---
+        // --- Battle phase system (real-time 3D TPS) ---
         function initBattlePhase() {
-            console.log(`[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: ${player.deck.length}枚`);
+            console.log(`[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: ${player.deck.length} cards`);
             cleanupBattle3D();
 
             playerMesh.position.set(0, 1.2, 0);
@@ -863,16 +863,16 @@
             if (type === 'glitch') {
                 geometry = new THREE.OctahedronGeometry(0.8);
                 color = 0xec4899; 
-                name = 'グリッチ・ウイルス';
+                name = 'Glitch Virus';
             } else { 
                 geometry = new THREE.BoxGeometry(1.2, 1.2, 1.2);
                 color = 0xf59e0b; 
-                name = 'センチネル・シールド';
+                name = 'Sentinel Shield';
                 maxHp = 40 * hpFactor * PARAMS.enemyHpMult;
                 speed = 0.02 * speedFactor;
             }
 
-            // オートモード時は最初からHPを1/10に
+            // Start at 1/10 HP in auto mode
             if (isAutoMode) {
                 maxHp /= 10;
             }
@@ -908,7 +908,7 @@
             };
 
             battleState.enemies.push(group);
-            console.log(`[DEBUG-SPAWN] 敵出現: ${name} (HP: ${maxHp.toFixed(1)}) at [${x.toFixed(1)}, ${z.toFixed(1)}]`);
+            console.log(`[DEBUG-SPAWN] Enemy spawned: ${name} (HP: ${maxHp.toFixed(1)}) at [${x.toFixed(1)}, ${z.toFixed(1)}]`);
         }
 
         function spawnBoss() {
@@ -932,14 +932,14 @@
                 maxHp /= 10;
             }
 
-            const intentSprite = createIntentSprite('メインフレーム・コア');
+            const intentSprite = createIntentSprite('Mainframe Core');
             intentSprite.position.y = 3.5;
             group.add(intentSprite);
 
             group.userData = {
                 id: 'boss-core',
                 type: 'boss',
-                name: 'メインフレーム・コア (BOSS)',
+                name: 'Mainframe Core (BOSS)',
                 hp: maxHp,
                 maxHp: maxHp,
                 speed: 0.015,
@@ -952,7 +952,7 @@
             };
 
             battleState.enemies.push(group);
-            console.log(`[DEBUG-SPAWN] 💻 ボス出現: メインフレーム・コア (HP: ${maxHp.toFixed(1)})`);
+            console.log(`[DEBUG-SPAWN] 捗 Boss spawned: Mainframe Core (HP: ${maxHp.toFixed(1)})`);
         }
 
         function createIntentSprite(name) {
@@ -973,7 +973,7 @@
 
             ctx.fillStyle = '#f43f5e';
             ctx.font = '14px monospace';
-            ctx.fillText('攻撃: LASER BEAM', 10, 48);
+            ctx.fillText('Attack: LASER BEAM', 10, 48);
 
             const texture = new THREE.CanvasTexture(canvas);
             const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
@@ -1005,13 +1005,13 @@
             let text = "";
             let color = "#ffffff";
             if (enemy.userData.intent === 'attack') {
-                text = "⚡ 攻撃予測 (6 DMG)";
+                text = "笞｡ Attack prediction (6 DMG)";
                 color = "#f43f5e";
             } else if (enemy.userData.intent === 'attack_heavy') {
-                text = "☄ ギガビーム弾 (15 DMG)";
+                text = "笘・Giga beam round (15 DMG)";
                 color = "#ef4444";
             } else if (enemy.userData.intent === 'defense') {
-                text = "🛡 防壁ロード (+10 BLOCK)";
+                text = "孱 Barrier load (+10 BLOCK)";
                 color = "#3b82f6";
             }
 
@@ -1023,7 +1023,7 @@
         }
 
         function cleanupBattle3D() {
-            // 安全な消去 & リソース解放 (dispose)
+            // Safe removal and resource release (dispose)
             if (battleState.enemies) {
                 battleState.enemies.forEach(e => {
                     scene.remove(e);
@@ -1077,7 +1077,7 @@
             }
         }
 
-        // --- デッキ構築＆ドローエンジン ---
+        // --- Deck build and draw engine ---
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1094,28 +1094,28 @@
                 shuffleArray(battleState.drawPile);
                 battleState.discardPile = [];
                 playSFX('draw');
-                console.log("[DEBUG-DECK] 墓地から山札を再構築＆シャッフル");
+                console.log("[DEBUG-DECK] Rebuild and shuffle the draw pile from the discard pile");
             }
 
             const card = battleState.drawPile.pop();
             battleState.hand.push(card);
             playSFX('draw');
-            console.log(`[DEBUG-DECK] カードドロー: ${card.name} (山札残り: ${battleState.drawPile.length}枚)`);
+            console.log(`[DEBUG-DECK] Card drawn: ${card.name} (Draw pile remaining: ${battleState.drawPile.length} cards)`);
         }
 
-        // --- カード発動システム ---
+        // --- Card activation system ---
         window.useCardIndex = function(index) {
             if (gameState !== 'battle') return;
             if (index < 0 || index >= battleState.hand.length) return;
 
             const card = battleState.hand[index];
             if (player.energy < card.cost) {
-                showToast("エネルギーが不足しています！");
+                showToast("Not enough energy!");
                 return;
             }
 
             player.energy -= card.cost;
-            console.log(`[DEBUG-PLAY] カード使用: ${card.name} (コスト: ${card.cost} / 残りエネルギー: ${player.energy.toFixed(1)})`);
+            console.log(`[DEBUG-PLAY] Card used: ${card.name} (cost: ${card.cost} / remaining energy: ${player.energy.toFixed(1)})`);
             triggerCardEffect(card);
 
             battleState.hand.splice(index, 1);
@@ -1133,7 +1133,7 @@
             const dmgShotgun = card.upgraded ? 7 : 5;
             const defAmt = card.upgraded ? 16 : 10;
 
-            console.log(`[DEBUG-EFFECT] ${card.name} 発動 (火力倍率: ${mult.toFixed(1)}x)`);
+            console.log(`[DEBUG-EFFECT] ${card.name} activated (Damage multiplier: ${mult.toFixed(1)}x)`);
 
             if (card.id === 'strike') {
                 playSFX('strike');
@@ -1172,7 +1172,7 @@
             else if (card.id === 'limit') {
                 playSFX('buff');
                 player.damageMult += 1.0;
-                showToast("全カードのダメージが+100%されました！");
+                showToast("All card damage increased by +100%!");
                 spawnBuffVFX();
             }
         }
@@ -1213,7 +1213,7 @@
             }
         }
 
-        // --- 弾丸射出関数群 ---
+        // --- Projectile spawning helpers ---
         function fireNormalBullet() {
             playSFX('shoot');
             const targetY = cameraTargetYaw;
@@ -1327,7 +1327,7 @@
             });
         }
 
-        // --- UIレンダリング系 ---
+        // --- UI rendering ---
         function renderHandUI() {
             const container = document.getElementById('hand-cards');
             container.innerHTML = '';
@@ -1399,7 +1399,7 @@
             }, 2500);
         }
 
-        // --- メインゲームループ (3D描画 ＆ ロジック) ---
+        // --- Main game loop (3D rendering and logic) ---
         let lastTime = 0;
         function gameLoop(time) {
             requestAnimationFrame(gameLoop);
@@ -1420,9 +1420,9 @@
         function updateBattleLogic() {
             if (gameState !== 'battle') return;
 
-            // --- 0. オートモード自動操作AI ---
+            // --- 0. Auto mode AI ---
             if (isAutoMode && battleState.enemies.length > 0) {
-                // 最も近い敵を探索
+                // Find the nearest enemy
                 let closestEnemy = null;
                 let minDist = Infinity;
                 battleState.enemies.forEach(enemy => {
@@ -1434,46 +1434,46 @@
                 });
 
                 if (closestEnemy) {
-                    // 1. 敵の方向へ自動エイム (カメラの回転目標Yawを補間)
+                    // 1. Auto-aim toward the enemy (interpolate the camera yaw target)
                     const dx = closestEnemy.position.x - playerMesh.position.x;
                     const dz = closestEnemy.position.z - playerMesh.position.z;
                     const targetYaw = Math.atan2(dx, dz);
                     
                     const yawDiff = targetYaw - cameraTargetYaw;
-                    cameraTargetYaw += Math.sin(yawDiff) * 0.12; // スムーズなエイム追尾
+                    cameraTargetYaw += Math.sin(yawDiff) * 0.12; // Smooth aim tracking
 
-                    // 2. 自動通常射撃ON
+                    // 2. Enable auto basic fire
                     isFiring = true;
 
-                    // 3. 自動カード発動（マナが溜まり次第、ストライクや防御を高速自動使用）
-                    if (Math.random() < 0.05) { // 5%のフレーム確率でチェック
+                    // 3. Auto-play cards as soon as energy is available
+                    if (Math.random() < 0.05) { // Check with a 5% per-frame chance
                         for (let idx = 0; idx < battleState.hand.length; idx++) {
                             const card = battleState.hand[idx];
                             if (player.energy >= card.cost) {
-                                console.log(`[DEBUG-AUTO-AI] カードを自動発動: ${card.name} (手札スロット: ${idx+1})`);
+                                console.log(`[DEBUG-AUTO-AI] Auto-play card: ${card.name} (hand slot: ${idx+1})`);
                                 useCardIndex(idx);
-                                break; // 同一フレームでの重複使用防止
+                                break; // Prevent duplicate use in the same frame
                             }
                         }
                     }
 
-                    // 4. 自動移動 (敵の周りを時計回りに円形旋回しながら間合いを調整)
+                    // 4. Auto-move (circle the enemy clockwise while adjusting range)
                     const toEnemyX = dx / minDist;
                     const toEnemyZ = dz / minDist;
 
-                    const tangentX = -toEnemyZ; // 接線ベクトル
+                    const tangentX = -toEnemyZ; // Tangent vector
                     const tangentZ = toEnemyX;
 
-                    const idealDist = 7.0; // 理想とする敵との距離
+                    const idealDist = 7.0; // Desired distance to the enemy
                     let moveDirX = tangentX * 0.8;
                     let moveDirZ = tangentZ * 0.8;
 
                     if (minDist > idealDist + 1.0) {
-                        // 近づく
+                        // Move closer
                         moveDirX += toEnemyX * 0.4;
                         moveDirZ += toEnemyZ * 0.4;
                     } else if (minDist < idealDist - 1.0) {
-                        // 離れる
+                        // Move away
                         moveDirX -= toEnemyX * 0.4;
                         moveDirZ -= toEnemyZ * 0.4;
                     }
@@ -1483,7 +1483,7 @@
                     playerMesh.position.add(moveVec);
                 }
             } else {
-                // 通常射撃自動連射の制御（マニュアル時）
+                // Auto basic-fire control (manual mode)
                 if (normalShootCooldown > 0) {
                     normalShootCooldown--;
                 }
@@ -1492,7 +1492,7 @@
                     normalShootCooldown = 12; 
                 }
 
-                // 通常のマニュアルキー移動
+                // Standard manual key movement
                 let moveX = 0;
                 let moveZ = 0;
 
@@ -1527,11 +1527,11 @@
                 }
             }
 
-            // プレイヤー座標の壁境界制限
+            // Clamp the player position to the arena bounds
             playerMesh.position.x = Math.max(-48, Math.min(48, playerMesh.position.x));
             playerMesh.position.z = Math.max(-48, Math.min(48, playerMesh.position.z));
 
-            // カメラフォロー
+            // Camera follow
             const camDist = 7.5;
             const targetCamX = playerMesh.position.x - Math.sin(cameraTargetYaw) * camDist;
             const targetCamZ = playerMesh.position.z - Math.cos(cameraTargetYaw) * camDist;
@@ -1546,16 +1546,16 @@
             if (!isAutoMode) {
                 playerMesh.rotation.y = playerMesh.userData.facingAngle;
             } else {
-                playerMesh.rotation.y = cameraTargetYaw; // オート時はエイムを向いて移動
+                playerMesh.rotation.y = cameraTargetYaw; // Face the aim direction while moving in auto mode
             }
 
-            // --- 2. エネルギー時間回復 ---
+            // --- 2. Energy regeneration over time ---
             if (player.energy < player.maxEnergy) {
                 player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame);
                 updateBattleStatsUI();
             }
 
-            // --- 3. バフ・防御シールドアップデート ---
+            // --- 3. Buff and defense shield updates ---
             if (battleState.shieldTimer > 0) {
                 battleState.shieldTimer--;
                 if (battleState.shieldMesh) {
@@ -1577,7 +1577,7 @@
                 battleState.invulnTimer--;
             }
 
-            // --- 4. 弾丸アップデート ＆ コリジョン判定 ---
+            // --- 4. Projectile updates and collision checks ---
             for (let i = battleState.projectiles.length - 1; i >= 0; i--) {
                 const p = battleState.projectiles[i];
                 p.mesh.position.add(p.velocity);
@@ -1643,7 +1643,7 @@
                 }
             }
 
-            // --- 5. 毒ガスドームの処理 ---
+            // --- 5. Poison gas dome handling ---
             for (let dIdx = battleState.acidDomes.length - 1; dIdx >= 0; dIdx--) {
                 const dome = battleState.acidDomes[dIdx];
                 dome.life--;
@@ -1666,17 +1666,17 @@
                 }
             }
 
-            // --- 6. 敵AI ＆ 移動 ＆ 行動更新 ---
+            // --- 6. Enemy AI, movement, and actions ---
             for (let eIdx = battleState.enemies.length - 1; eIdx >= 0; eIdx--) {
                 const enemy = battleState.enemies[eIdx];
 
                 if (enemy.userData.hp <= 0) {
                     playSFX('explosion');
-                    console.log(`[DEBUG-KILL] 敵の撃破検出: ${enemy.userData.name}`);
+                    console.log(`[DEBUG-KILL] Enemy defeated: ${enemy.userData.name}`);
                     spawnExplosion(enemy.position, 0xec4899);
                     scene.remove(enemy);
                     
-                    // リソース解放
+                    // Release resources
                     enemy.traverse(child => {
                         if (child.geometry) child.geometry.dispose();
                         if (child.material) {
@@ -1731,7 +1731,7 @@
                 updateEnemyIntentUI(enemy);
             }
 
-            // --- 7. パーティクルの更新 ---
+            // --- 7. Particle updates ---
             for (let i = battleState.particles.length - 1; i >= 0; i--) {
                 const p = battleState.particles[i];
                 p.mesh.position.add(p.velocity);
@@ -1744,15 +1744,15 @@
                 }
             }
 
-            // --- 8. 勝敗確定の監視 (例外ガード＆即時クリーンアップ) ---
+            // --- 8. Win/loss monitoring and cleanup ---
             if (battleState.enemies.length === 0) {
                 gameState = 'battle_end';
                 isFiring = false;
 
-                console.log(`[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。`);
-                showToast("戦闘に勝利！ネットワーク障壁を撃破しました。");
+                console.log(`[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.`);
+                showToast("Battle won! Network barrier destroyed.");
                 
-                // ポインターロック解除時の例外ガード
+                // Guard pointer lock release errors
                 try {
                     if (document && document.pointerLockElement === renderer.domElement) {
                         document.exitPointerLock();
@@ -1763,10 +1763,10 @@
 
                 cleanupBattle3D();
 
-                // 1秒間の余韻の後に確実に2Dドラフト画面へ移行
+                // Transition to the 2D draft screen after a short delay
                 setTimeout(() => {
                     if (selectedNode && selectedNode.type === 'boss') {
-                        console.log(`[DEBUG-WIN] 全セクターハック完了！`);
+                        console.log(`[DEBUG-WIN] All sector hacks complete!`);
                         showPanel('victory');
                     } else {
                         showPanel('reward');
@@ -1786,12 +1786,12 @@
                 player.hp -= amount;
             }
 
-            console.log(`[DEBUG-DAMAGE] プレイヤー被弾: ${amount}ダメージ (残りHP: ${player.hp.toFixed(1)} / シールド: ${player.shield.toFixed(1)})`);
+            console.log(`[DEBUG-DAMAGE] Player hit: ${amount} damage (Remaining HP: ${player.hp.toFixed(1)} / Shield: ${player.shield.toFixed(1)})`);
             updateBattleStatsUI();
 
             if (player.hp <= 0) {
                 player.hp = 0;
-                console.log(`[DEBUG-DEATH] 💀 プレイヤーの死亡検知。システムHP枯渇 💀`);
+                console.log(`[DEBUG-DEATH] 逐 Player death detected. System HP depleted 逐`);
                 try {
                     if (document && document.pointerLockElement === renderer.domElement) {
                         document.exitPointerLock();
@@ -1862,7 +1862,7 @@
 
         window.startGame = function() {
             if (typeof window.clearLog === 'function') window.clearLog();
-            console.log(`[DEBUG-NAV] ゲーム開始 [PARAM: ${PARAMS.paramName}]`);
+            console.log(`[DEBUG-NAV] Game start [PARAM: ${PARAMS.paramName}]`);
             currentStage = 1;
             player.hp = PARAMS.playerMaxHp;
             player.maxHp = PARAMS.playerMaxHp;
@@ -1875,15 +1875,15 @@
             showPanel('start');
         };
 
-        // マップ階層定義
+        // Map layer definition
         const MAP_NODE_TYPES = [
             [], // dummy index 0
-            [{ type: 'start', label: '開始ノード', desc: 'ネットワーク進入経路' }],
-            [{ type: 'fight', label: 'ウイルス防壁', desc: 'セキュリティ検知・中' }, { type: 'fight', label: '隔離セクタ', desc: 'セキュリティ検知・低' }],
-            [{ type: 'shop', label: '闇モジュール市場', desc: 'ハックプログラム売買' }, { type: 'fight', label: '感染データ層', desc: 'セキュリティ検知・中' }],
-            [{ type: 'elite', label: 'セキュリティ中枢 (Elite)', desc: '強力な親ウイルス検知' }],
-            [{ type: 'camp', label: 'システムセーフハウス', desc: 'メモリの解放、修復' }],
-            [{ type: 'fight', label: 'システム中核防壁', desc: '高度セキュリティ' }, { type: 'shop', label: '極限データ・トレード', desc: 'ハックプログラム売買' }],
-            [{ type: 'camp', label: '最終最適化ノード', desc: '最終防戦への準備' }],
-            [{ type: 'boss', label: 'メインフレーム・コア (BOSS)', desc: 'マザーボード全域封鎖の起点' }]
+            [{ type: 'start', label: 'Start Node', desc: 'Network entry path' }],
+            [{ type: 'fight', label: 'Virus Barrier', desc: 'Security detection: medium' }, { type: 'fight', label: 'Quarantine Sector', desc: 'Security detection: low' }],
+            [{ type: 'shop', label: 'Black Module Market', desc: 'Hack program trading' }, { type: 'fight', label: 'Infected Data Layer', desc: 'Security detection: medium' }],
+            [{ type: 'elite', label: 'Security Core (Elite)', desc: 'High-priority parent virus detected' }],
+            [{ type: 'camp', label: 'System Safe House', desc: 'Memory release and repair' }],
+            [{ type: 'fight', label: 'System Core Barrier', desc: 'High security' }, { type: 'shop', label: 'Extreme Data Trade', desc: 'Hack program trading' }],
+            [{ type: 'camp', label: 'Final Optimization Node', desc: 'Prepare for the final defense' }],
+            [{ type: 'boss', label: 'Mainframe Core (BOSS)', desc: 'Origin point of total motherboard lockdown' }]
         ];
