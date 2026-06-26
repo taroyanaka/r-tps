@@ -1,0 +1,196 @@
+[DEBUG-NAV] ゲーム開始 [PARAM: default]
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: 10枚
+[DEBUG-SPAWN] 敵出現: センチネル・シールド (HP: 4.0) at [15.6, 3.1]
+[DEBUG-SPAWN] 敵出現: センチネル・シールド (HP: 4.0) at [-11.6, -10.5]
+[DEBUG-DECK] カードドロー: 散弾ショット (山札残り: 9枚)
+[DEBUG-DECK] カードドロー: アシッドガス (山札残り: 8枚)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 7枚)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 6枚)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] カードを自動発動: 散弾ショット (手札スロット: 1)
+[DEBUG-PLAY] カード使用: 散弾ショット (コスト: 2 / 残りエネルギー: 1.0)
+[DEBUG-EFFECT] 散弾ショット 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 5枚)
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 2)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 0.0)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 4枚)
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 2)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 0.0)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 3枚)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
+[DEBUG-AUTO-AI] カードを自動発動: ストライク (手札スロット: 2)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 2枚)
+[DEBUG-EFFECT] ストライク 発動 (火力倍率: 1.0x)
+[DEBUG-PLAY] カード使用: ストライク (コスト: 1 / 残りエネルギー: 0.0)
+[DEBUG-KILL] 敵の撃破検出: センチネル・シールド
+[DEBUG-KILL] 敵の撃破検出: センチネル・シールド
+[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: 限界突破
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: 11枚
+[DEBUG-SPAWN] 敵出現: グリッチ・ウイルス (HP: 2.5) at [15.7, 7.3]
+[DEBUG-SPAWN] 敵出現: グリッチ・ウイルス (HP: 2.5) at [-11.5, -12.7]
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 10枚)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 9枚)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 8枚)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 7枚)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] カードを自動発動: ストライク (手札スロット: 1)
+[DEBUG-PLAY] カード使用: ストライク (コスト: 1 / 残りエネルギー: 2.0)
+[DEBUG-EFFECT] ストライク 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 6枚)
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 2)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 1.2)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 5枚)
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 2)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 0.2)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: アシッドガス (山札残り: 4枚)
+[DEBUG-KILL] 敵の撃破検出: グリッチ・ウイルス
+[DEBUG-KILL] 敵の撃破検出: グリッチ・ウイルス
+[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: ドッジパルス+
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: 12枚
+[DEBUG-SPAWN] 敵出現: センチネル・シールド (HP: 4.0) at [15.1, 3.0]
+[DEBUG-SPAWN] 敵出現: センチネル・シールド (HP: 4.0) at [-17.6, -6.5]
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 11枚)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 10枚)
+[DEBUG-DECK] カードドロー: アシッドガス (山札残り: 9枚)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 8枚)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] カードを自動発動: 限界突破 (手札スロット: 1)
+[DEBUG-EFFECT] 限界突破 発動 (火力倍率: 1.0x)
+[DEBUG-PLAY] カード使用: 限界突破 (コスト: 3 / 残りエネルギー: 0.0)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 7枚)
+[DEBUG-AUTO-AI] カードを自動発動: ストライク (手札スロット: 1)
+[DEBUG-PLAY] カード使用: ストライク (コスト: 1 / 残りエネルギー: 0.1)
+[DEBUG-EFFECT] ストライク 発動 (火力倍率: 2.0x)
+[DEBUG-DECK] カードドロー: 散弾ショット (山札残り: 6枚)
+[DEBUG-KILL] 敵の撃破検出: センチネル・シールド
+[DEBUG-KILL] 敵の撃破検出: センチネル・シールド
+[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: アシッドガス
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: 13枚
+[DEBUG-SPAWN] 敵出現: グリッチ・ウイルス (HP: 4.5) at [13.8, 8.2]
+[DEBUG-SPAWN] 敵出現: グリッチ・ウイルス (HP: 4.5) at [-13.0, 10.1]
+[DEBUG-SPAWN] 敵出現: センチネル・シールド (HP: 7.2) at [3.2, -15.7]
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 12枚)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 11枚)
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 10枚)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 9枚)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 1)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 2.0)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: アシッドガス (山札残り: 8枚)
+[DEBUG-AUTO-AI] カードを自動発動: 防御シールド (手札スロット: 2)
+[DEBUG-PLAY] カード使用: 防御シールド (コスト: 1 / 残りエネルギー: 1.1)
+[DEBUG-EFFECT] 防御シールド 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 7枚)
+[DEBUG-AUTO-AI] カードを自動発動: ストライク (手札スロット: 2)
+[DEBUG-PLAY] カード使用: ストライク (コスト: 1 / 残りエネルギー: 0.2)
+[DEBUG-EFFECT] ストライク 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 6枚)
+[DEBUG-KILL] 敵の撃破検出: グリッチ・ウイルス
+[DEBUG-KILL] 敵の撃破検出: グリッチ・ウイルス
+[DEBUG-AUTO-AI] カードを自動発動: ストライク (手札スロット: 3)
+[DEBUG-DAMAGE] プレイヤー被弾: 6ダメージ (残りHP: 80.0 / シールド: 14.0)
+[DEBUG-PLAY] カード使用: ストライク (コスト: 1 / 残りエネルギー: 0.0)
+[DEBUG-EFFECT] ストライク 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: 散弾ショット (山札残り: 5枚)
+[DEBUG-KILL] 敵の撃破検出: センチネル・シールド
+[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: ストライク+
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: camp
+[DEBUG-AUTO] Scheduling auto progression for camp
+[DEBUG-AUTO] Executing auto progression for camp, gameState is camp
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: shop
+[DEBUG-AUTO] Scheduling auto progression for shop
+[DEBUG-AUTO] Executing auto progression for shop, gameState is shop
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: camp
+[DEBUG-AUTO] Scheduling auto progression for camp
+[DEBUG-AUTO] Executing auto progression for camp, gameState is camp
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 💥 バトルセクター初期化 💥 デッキ枚数: 14枚
+[DEBUG-SPAWN] 💻 ボス出現: メインフレーム・コア (HP: 15.0)
+[DEBUG-DECK] カードドロー: ドッジパルス+ (山札残り: 13枚)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 12枚)
+[DEBUG-DECK] カードドロー: 限界突破 (山札残り: 11枚)
+[DEBUG-DECK] カードドロー: ストライク+ (山札残り: 10枚)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-DECK] カードドロー: 防御シールド (山札残り: 9枚)
+[DEBUG-EFFECT] ドッジパルス+ 発動 (火力倍率: 1.0x)
+[DEBUG-PLAY] カード使用: ドッジパルス+ (コスト: 0 / 残りエネルギー: 3.0)
+[DEBUG-AUTO-AI] カードを自動発動: ドッジパルス+ (手札スロット: 1)
+[DEBUG-AUTO-AI] カードを自動発動: 限界突破 (手札スロット: 1)
+[DEBUG-PLAY] カード使用: 限界突破 (コスト: 3 / 残りエネルギー: 0.0)
+[DEBUG-EFFECT] 限界突破 発動 (火力倍率: 1.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 8枚)
+[DEBUG-PLAY] カード使用: ストライク+ (コスト: 1 / 残りエネルギー: 0.1)
+[DEBUG-AUTO-AI] カードを自動発動: ストライク+ (手札スロット: 2)
+[DEBUG-EFFECT] ストライク+ 発動 (火力倍率: 2.0x)
+[DEBUG-DECK] カードドロー: ストライク (山札残り: 7枚)
+[DEBUG-KILL] 敵の撃破検出: メインフレーム・コア (BOSS)
+[DEBUG-WIN] 🎉 戦闘に勝利！ 敵が完全に排除されました。
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-WIN] 全セクターハック完了！
+[DEBUG-PANEL] showPanel: victory
+[DEBUG-AUTO] Scheduling auto progression for victory
+[DEBUG-AUTO] Executing auto progression for victory, gameState is victory
