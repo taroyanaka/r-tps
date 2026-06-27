@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER SPIRE: TPS Deckbuilder</title>
+    <!-- Tailwind CSS for modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        const _htmlUrlParams = new URLSearchParams(window.location.search);
+        const _htmlParamName = _htmlUrlParams.get('param') || null;
+
+        const originalLog = console.log;
+        const originalError = console.error;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(a => typeof a === 'object' ? (a instanceof Error ? a.stack : JSON.stringify(a)) : String(a)).join(' ');
+            const body = { message: message };
+            if (_htmlParamName) body.param_name = _htmlParamName;
+            fetch('http://localhost:8000/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).catch(e => {});
+        };
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            console.log("[ERROR]", ...args);
+        };
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.log(`[JS_ERROR] ${msg} at ${url}:${lineNo}:${columnNo}`);
+            if (error && error.stack) console.log(error.stack);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            console.log(`[PROMISE_ERROR] ${event.reason}`);
+        });
+        // Clear the log when the game starts.
+        window.clearLog = function() {
+            const body = {};
+            if (_htmlParamName) body.param_name = _htmlParamName;
+            fetch('http://localhost:8000/clear_log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).catch(e => {});
+        };
+    </script>
+</head>
+<body class="cyber-grid w-screen h-screen relative">
+
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas" class="absolute inset-0 w-full h-full z-0 pointer-events-auto"></canvas>
+
+    <!-- 繝ｬ繝・ぅ繧ｯ繝ｫ・育・貅厄ｼ欝PS逕ｨ -->
+    <div id="reticle" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 hidden">
+        <div class="w-6 h-6 border border-cyan-400/80 rounded-full flex items-center justify-center">
+            <div class="w-1 h-1 bg-cyan-400 rounded-full"></div>
+        </div>
+    </div>
+
+    <!-- 2D UI layer -->
+    <div id="ui-container" class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6">
+
+        <!-- 荳企Κ繝舌・ -->
+        <div class="flex justify-between items-start w-full pointer-events-auto">
+            <!-- 繝励Ξ繧､繝､繝ｼ繝｡繧､繝ｳ繧ｹ繝・・繧ｿ繧ｹ -->
+            <div class="bg-slate-950/80 backdrop-blur-md px-4 py-3 rounded-xl border border-blue-500/30 flex items-center gap-4 shadow-lg">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-blue-400 font-bold tracking-wider uppercase">PLAYER STATUS</span>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <i class="fa-solid fa-heart-pulse text-rose-500 animate-pulse"></i>
+                        <div class="w-36 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 relative">
+                            <div id="player-hp-bar" class="h-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-150" style="width: 100%;"></div>
+                            <span id="player-hp-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">80/80</span>
+                        </div>
+                    </div>
+                    <!-- 繝悶Ο繝・け蛟､ -->
+                    <div class="flex items-center gap-1.5 mt-1.5 text-xs">
+                        <i class="fa-solid fa-shield-halved text-cyan-400"></i>
+                        <span class="text-gray-400">Block:</span>
+                        <span id="player-block" class="text-cyan-400 font-bold">0</span>
+                    </div>
+                </div>
+                <div class="w-[1px] h-10 bg-slate-800"></div>
+                <!-- 繝・ャ繧ｭ/繧ｴ繝ｼ繝ｫ繝・-->
+                <div class="flex flex-col gap-1 justify-center">
+                    <div class="flex items-center gap-1.5 text-xs text-amber-400 font-mono">
+                        <i class="fa-solid fa-coins"></i>
+                        <span id="player-gold">99</span> G
+                    </div>
+                    <div class="flex items-center gap-1.5 text-xs text-blue-400">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <span class="text-gray-400">Deck:</span>
+                        <span id="player-deck-size" class="font-bold">10 cards</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current node / stage / auto mode -->
+            <div class="bg-slate-950/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-purple-500/30 text-right flex flex-col justify-center items-end shadow-lg">
+                <span class="text-[10px] text-purple-400 font-bold uppercase tracking-wider">NETWORK NODE</span>
+                <span id="current-node-name" class="text-sm font-bold text-white neon-text-magenta">Sector 01 - Start</span>
+                <span id="current-stage-text" class="text-[10px] text-gray-400 font-mono mt-0.5">Stage 1 / 8</span>
+                <!-- Auto mode indicator -->
+                <span id="mode-indicator" class="text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono mt-1.5 inline-block">MANUAL MODE (P)</span>
+            </div>
+        </div>
+
+        <!-- Main panel -->
+        <div id="main-panel" class="w-full flex-1 flex items-center justify-center my-2 overflow-hidden">
+            <!-- 蛻晄悄繝ｭ繝ｼ繝臥判髱｢縺悟虚逧・↓蜈･繧翫∪縺・-->
+        </div>
+
+        <!-- 荳矩Κ・壽姶髣倡畑繧ｫ繝ｼ繝峨ヨ繝ｬ繧､ -->
+        <div id="battle-tray" class="w-full flex flex-col items-center pointer-events-none transition-transform duration-500 translate-y-32">
+            <!-- 繧ｨ繝阪Ν繧ｮ繝ｼ・・ｱｱ譛ｭ繝ｻ蠅灘慍繧ｫ繧ｦ繝ｳ繧ｿ繝ｼ -->
+            <div class="flex justify-between items-end w-full max-w-4xl px-4 mb-2 pointer-events-auto">
+                <!-- 螻ｱ譛ｭ -->
+                <div class="bg-slate-950/90 border border-blue-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 text-blue-400 shadow-lg">
+                    <i class="fa-solid fa-arrow-turn-up rotate-90 text-sm"></i>
+                    <span>螻ｱ譛ｭ: <strong id="draw-pile-count" class="font-mono text-sm text-white">0</strong></span>
+                </div>
+
+                <!-- Energy -->
+                <div class="flex flex-col items-center">
+                    <div class="flex gap-1 mb-1">
+                        <div id="energy-nodes" class="flex gap-1.5">
+                            <!-- 繧ｨ繝阪Ν繧ｮ繝ｼ繝弱・繝牙虚逧・函謌・-->
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/90 border border-cyan-500/30 px-5 py-1.5 rounded-full flex items-center gap-2 text-cyan-400 shadow-xl">
+                        <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-sm"></i>
+                        <span class="text-xs tracking-wider uppercase font-bold text-gray-300">ENERGY</span>
+                        <span id="energy-text" class="font-mono text-base font-bold text-white">3.0 / 3</span>
+                    </div>
+                </div>
+
+                <!-- Discard pile -->
+                <div class="bg-slate-950/90 border border-rose-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 text-rose-400 shadow-lg">
+                    <span>Discard: <strong id="discard-pile-count" class="font-mono text-sm text-white">0</strong></span>
+                    <i class="fa-solid fa-trash-can text-sm"></i>
+                </div>
+            </div>
+
+            <!-- Hand card tray -->
+            <div id="hand-cards" class="flex justify-center items-center gap-3 w-full max-w-3xl pointer-events-auto h-36">
+                <!-- 縺薙％縺ｫ繧ｫ繝ｼ繝峨′4譫夐・繧峨ｌ縺ｾ縺・-->
+            </div>
+
+            <div class="text-[10px] text-gray-500 mt-2 tracking-widest uppercase flex items-center gap-2">
+                <span>[1] [2] [3] [4] keys to use cards</span>
+                <span class="text-slate-700">|</span>
+                <span>蟾ｦ繧ｯ繝ｪ繝・け髟ｷ謚ｼ縺励〒騾壼ｸｸ蟆・茶・医お繧､繝繝ｻ遘ｻ蜍戊・蜍募喧縺ｮ[P]繧ｭ繝ｼ・哂UTO・・/span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 繝ｭ繝ｼ繝・ぅ繝ｳ繧ｰ / 驕ｮ譁ｭ蟷・-->
+    <div id="curtain" class="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+        <div class="flex flex-col items-center">
+            <div class="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mb-4"></div>
+            <p id="curtain-text" class="text-sm font-mono tracking-widest text-cyan-400 animate-pulse">Connecting sector...</p>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white tracking-widest"><i class="fa-solid fa-circle-question mr-2 text-cyan-400"></i>謫堺ｽ懊・繝九Η繧｢繝ｫ</h2>
+                <button onclick="document.getElementById('help-modal').classList.add('hidden')" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="text-left bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-gray-300 space-y-2 overflow-y-auto max-h-[60vh] hide-scrollbar">
+                <p class="font-bold text-white"><i class="fa-solid fa-gamepad mr-2 text-cyan-400"></i>Basic Controls</p>
+                <p>繝ｻ<span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">WASD</span>: 遘ｻ蜍・/p>
+                <p>繝ｻ<span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">P 繧ｭ繝ｼ</span>: <strong class="text-emerald-400">繧ｪ繝ｼ繝・繝槭ル繝･繧｢繝ｫ蛻・ｊ譖ｿ縺・/strong></p>
+                <p>繝ｻ<span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">繝槭え繧ｹ繝峨Λ繝・げ</span>: 隕也せ遘ｻ蜍・/p>
+                <p>繝ｻ<span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">蟾ｦ繧ｯ繝ｪ繝・け</span>: 騾壼ｸｸ蟆・茶・域焔蜍輔お繧､繝譎ゑｼ・/p>
+                <p>• <span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">1, 2, 3, 4</span>: Use cards</p>
+                <hr class="border-slate-800 my-2">
+                <p class="text-gray-400 text-[11px] leading-relaxed">繝・ャ繧ｭ讒狗ｯ牙梛繝ｭ繝ｼ繧ｰ繝ｩ繧､繧ｯTPS縲ゅえ繧､繝ｫ繧ｹ縺ｮ謾ｻ謦・ｒ繧ｵ繧､繝峨せ繝・ャ繝励〒驕ｿ縺代∝ｼｷ蜉帙↑繧ｫ繝ｼ繝峨せ繧ｭ繝ｫ縺ｧ繧ｳ繧｢繧偵ワ繝・く繝ｳ繧ｰ縺励ｍ縲・/p>
+            </div>
+            <button onclick="document.getElementById('help-modal').classList.add('hidden')" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all uppercase tracking-widest text-xs">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- UI繝・Φ繝励Ξ繝ｼ繝井ｿ晉ｮ｡蠎ｫ -->
+    <div id="templates" class="hidden">
+        
+        <!-- Start screen -->
+        <div id="temp-start-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-start p-2 pt-6">
+            <div class="max-w-md w-full glass-panel bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-pink-500/30 text-center flex flex-col items-center pointer-events-auto shadow-2xl">
+                <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mb-3 md:mb-4 shadow-lg shadow-pink-500/20 flex-shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-xl md:text-3xl text-white"></i>
+                </div>
+                <h1 class="text-xl md:text-2xl font-black tracking-widest text-white mb-0.5 uppercase">CYBER SPIRE</h1>
+                <p class="text-[10px] md:text-xs text-pink-400 font-mono tracking-widest uppercase mb-4">TPS ﾃ・Slay the Spire</p>
+                <div class="w-full flex flex-col gap-3">
+                    <button onclick="startGame()" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0">
+                        Connect to the network (default)
+                    </button>
+                    <button onclick="document.getElementById('help-modal').classList.remove('hidden')" class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm">
+                        Help / Manual
+                    </button>
+
+                    <!-- 繝・せ繝医そ繧ｯ繧ｷ繝ｧ繝ｳ -->
+                    <div class="w-full border-t border-slate-800 pt-3 mt-1">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-mono">param.txt 繝ｬ繧ｮ繝･繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ 繝・せ繝・/p>
+                        <div id="param-test-list" class="flex flex-col gap-2">
+                            <p class="text-slate-600 text-xs italic">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            // 直開き対応: ローカルの param-data.js を優先して一覧を描画する
+            window._renderParamTestButtons = function() {
+                const container = document.getElementById('param-test-list');
+                if (!container) return;
+
+                const render = (configs) => {
+                    container.innerHTML = '';
+                    configs.forEach(cfg => {
+                        const name = cfg.paramName || 'unknown';
+                        const baseUrl = window.location.pathname;
+                        const row = document.createElement('div');
+                        row.className = 'flex gap-2 w-full items-center';
+
+                        const label = document.createElement('span');
+                        label.className = 'text-[10px] font-mono text-slate-400 w-24 text-left truncate flex-shrink-0';
+                        label.textContent = name;
+
+                        const manualBtn = document.createElement('button');
+                        manualBtn.className = 'flex-1 bg-blue-900/50 hover:bg-blue-800/70 border border-blue-500/30 text-blue-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
+                        manualBtn.textContent = '謇句虚';
+                        manualBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=manual`, '_blank');
+
+                        const autoBtn = document.createElement('button');
+                        autoBtn.className = 'flex-1 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
+                        autoBtn.textContent = '閾ｪ蜍・';
+                        autoBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=auto`, '_blank');
+
+                        row.appendChild(label);
+                        row.appendChild(manualBtn);
+                        row.appendChild(autoBtn);
+                        container.appendChild(row);
+                    });
+                };
+
+                if (Array.isArray(window.PARAM_CONFIGS)) {
+                    render(window.PARAM_CONFIGS);
+                    return;
+                }
+
+                fetch('http://localhost:8000/params')
+                    .then(r => r.json())
+                    .then(render)
+                    .catch(() => {
+                        container.innerHTML = '<p class="text-slate-600 text-xs italic">ローカル一覧を読めませんでした。</p>';
+                    });
+            };
+        </script>
+
+        <!-- 繝ｫ繝ｼ繝医・繝・・逕ｻ髱｢ -->
+        <div id="temp-map-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-2xl w-full bg-slate-950/90 backdrop-blur-md p-5 md:p-6 rounded-3xl border border-blue-500/20 flex flex-col items-center pointer-events-auto shadow-2xl max-h-[85vh] my-auto">
+                <div class="flex justify-between items-center w-full border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+                    <div>
+                        <h2 class="text-sm md:text-md font-bold text-white tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-network-wired text-blue-400"></i>繧ｷ繧ｹ繝・Β繝ｻ繝｡繧､繝ｳ繝輔Ξ繝ｼ繝
+                        </h2>
+                        <p class="text-[9px] md:text-[10px] text-gray-400">螳牙・縺ｪ謗･邯壹ヱ繧ｹ繧帝∈謚槭＠縺ｦ縺上□縺輔＞</p>
+                    </div>
+                    <span class="text-[9px] md:text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">MAP LAYER</span>
+                </div>
+
+                <!-- 繝槭ャ繝励ヮ繝ｼ繝峨さ繝ｳ繝・リ -->
+                <div id="map-nodes-container" class="w-full flex-1 overflow-y-auto pr-1 flex flex-col justify-start items-center gap-3.5 py-2 hide-scrollbar">
+                    <!-- 繝槭ャ繝励・髫主ｱ､縺悟虚逧・↓豬√＠霎ｼ縺ｾ繧後ｋ -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 蝣ｱ驟ｬ繝峨Λ繝輔ヨ逕ｻ髱｢ -->
+        <div id="temp-reward-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-3xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-8 rounded-3xl border border-green-500/30 flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-2.5 border border-green-500/20 flex-shrink-0">
+                    <i class="fa-solid fa-microchip text-xl text-green-400"></i>
+                </div>
+                <h2 class="text-lg font-bold text-white tracking-widest mb-0.5 neon-text-green">繧ｷ繧ｹ繝・Β譛驕ｩ蛹悶・蝣ｱ驟ｬ</h2>
+                <p class="text-[10px] text-gray-400 mb-4">諡｡蠑ｵ繧ｵ繝悶Δ繧ｸ繝･繝ｼ繝ｫ繧・縺､驕ｸ謚槭＠縺ｦ縲√ョ繝・く縺ｫ邨ｱ蜷医＠縺ｦ縺上□縺輔＞</p>
+
+                <!-- Gold reward -->
+                <div class="bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs px-4 py-1.5 rounded-xl mb-4 flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-coins animate-bounce"></i>
+                    <span>謌ｦ髣伜ｱ驟ｬ: <strong id="reward-gold-amount">25</strong> 繧ｴ繝ｼ繝ｫ繝・繧堤佐蠕励＠縺ｾ縺励◆・・/span>
+                </div>
+
+                <!-- 繧ｫ繝ｼ繝峨ラ繝ｩ繝輔ヨ驕ｸ謚櫁い・・譫夲ｼ・-->
+                <div id="reward-card-options" class="flex flex-col md:flex-row justify-center gap-3 w-full mb-5 max-h-[40vh] md:max-h-none overflow-y-auto md:overflow-visible p-1">
+                    <!-- 3譫壹・繧ｫ繝ｼ繝峨′蜍慕噪縺ｫ謖ｿ蜈･縺輔ｌ繧・-->
+                </div>
+
+                <button onclick="skipReward()" class="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest font-bold flex-shrink-0 py-1">
+                    繧ｹ繧ｭ繝・・縺励※騾ｲ繧
+                </button>
+            </div>
+        </div>
+
+        <!-- 繧ｭ繝｣繝ｳ繝暦ｼ井ｿｮ蠕ｩ・・ｼｷ蛹厄ｼ臥判髱｢ -->
+        <div id="temp-camp-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-yellow-500/30 flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+                <div class="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-3 flex-shrink-0">
+                    <i class="fa-solid fa-fire-flame-curved text-xl text-yellow-400"></i>
+                </div>
+                <h2 class="text-md md:text-lg font-bold text-white tracking-wider mb-0.5">Safe House Terminal</h2>
+                <p class="text-[10px] text-gray-400 text-center mb-5">螳牙・縺ｪ謗･邯壹ヮ繝ｼ繝峨〒縺吶ゅす繧ｹ繝・Β繝ｪ繧ｽ繝ｼ繧ｹ縺ｮ蜑ｲ繧雁ｽ薙※繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・/p>
+
+                <div class="w-full flex flex-col gap-2.5">
+                    <!-- Recovery options -->
+                    <button onclick="campHeal()" class="w-full bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 p-3.5 rounded-xl text-left flex items-center justify-between transition-all group hover:neon-border-green">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                                <i class="fa-solid fa-circle-plus text-md"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs md:text-sm font-bold text-white group-hover:text-emerald-400">繝翫ヮ繝槭す繝ｳ蜀崎ｵｷ蜍・(菫ｮ蠕ｩ)</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">Restore 30% of lost HP.</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-emerald-400 font-bold">+24 HP</span>
+                    </button>
+
+                    <!-- 繧｢繝・・繧ｰ繝ｬ繝ｼ繝峨が繝励す繝ｧ繝ｳ -->
+                    <button id="camp-upgrade-btn" onclick="openCampUpgradeSelection()" class="w-full bg-slate-900 hover:bg-slate-850 border border-yellow-500/30 p-3.5 rounded-xl text-left flex items-center justify-between transition-all group hover:neon-border-magenta">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-yellow-500/10 rounded-lg flex items-center justify-center text-yellow-400 group-hover:scale-105 transition-transform">
+                                <i class="fa-solid fa-bolt text-md"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs md:text-sm font-bold text-white group-hover:text-yellow-400">繝｢繧ｸ繝･繝ｼ繝ｫ繝ｻ繧ｪ繝ｼ繝舌・繧ｯ繝ｭ繝・け</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">繝・ャ繧ｭ縺ｮ繧ｫ繝ｼ繝・譫壹ｒ豌ｸ荵・噪縺ｫ蠑ｷ蛹悶＠縺ｾ縺吶・/p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-yellow-400 font-bold">UPGRADE</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 繧ｫ繝ｼ繝峨い繝・・繧ｰ繝ｬ繝ｼ繝蛾∈謚樒畑繧ｵ繝悶Δ繝ｼ繝繝ｫ -->
+        <div id="temp-upgrade-select" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-2xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-yellow-500/30 flex flex-col pointer-events-auto shadow-2xl my-auto max-h-[85vh]">
+                <h3 class="text-xs md:text-sm font-bold text-white tracking-widest mb-3 uppercase flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-microchip text-yellow-400"></i>Select a module to upgrade
+                </h3>
+                
+                <div id="upgrade-deck-list" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1 mb-4 hide-scrollbar">
+                    <!-- 繝・ャ繧ｭ蜀・・繧ｫ繝ｼ繝峨′繝ｪ繧ｹ繝郁｡ｨ遉ｺ縺輔ｌ繧・-->
+                </div>
+
+                <div class="flex justify-end gap-3 flex-shrink-0">
+                    <button onclick="backToCamp()" class="text-[10px] md:text-xs text-gray-400 hover:text-white px-4 py-2 font-bold uppercase tracking-widest">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 繧ｷ繝ｧ繝・・逕ｻ髱｢ -->
+        <div id="temp-shop-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-2xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-amber-500/30 flex flex-col pointer-events-auto shadow-2xl my-auto max-h-[85vh]">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+                    <div>
+                        <h2 class="text-sm md:text-md font-bold text-white tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-cart-shopping text-amber-400"></i>繝悶Λ繝・け繝上ャ繧ｯ繝ｻ蟶ょｴ
+                        </h2>
+                        <p class="text-[9px] md:text-[10px] text-gray-400">繧ｯ繝ｬ繧ｸ繝・ヨ繧呈ｶ郁ｲｻ縺励※繝｢繧ｸ繝･繝ｼ繝ｫ繧偵Ο繝ｼ繝・/p>
+                    </div>
+                    <button onclick="leaveShop()" class="text-[10px] md:text-xs bg-slate-900 hover:bg-slate-850 text-gray-300 border border-slate-700 px-3 py-1 rounded-xl">
+                        繝槭・繧ｱ繝・ヨ繧貞・譁ｭ縺吶ｋ
+                    </button>
+                </div>
+
+                <!-- 繧ｷ繝ｧ繝・・繧｢繧､繝・Β -->
+                <div id="shop-items-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2 overflow-y-auto max-h-[55vh] pr-1 hide-scrollbar">
+                    <!-- 繧｢繧､繝・Β縺御ｸｦ縺ｳ縺ｾ縺・-->
+                </div>
+            </div>
+        </div>
+
+        <!-- 謨怜圏逕ｻ髱｢ -->
+        <div id="temp-gameover-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-red-500/40 text-center flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+                <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-3 text-red-500 animate-pulse flex-shrink-0">
+                    <i class="fa-solid fa-skull-crossbones text-xl md:text-3xl"></i>
+                </div>
+                <h2 class="text-lg md:text-2xl font-black tracking-widest text-red-500 mb-0.5 uppercase">謗･邯壼ｼｷ蛻ｶ蛻・妙 (GAME OVER)</h2>
+                <p class="text-[10px] md:text-xs text-gray-400 mb-5">繧ｦ繧､繝ｫ繧ｹ縺ｮ髦ｲ蠕｡髫懷｣√↓繧医ｊ繧ｷ繧ｹ繝・ΒHP縺梧椡貂・＠縺ｾ縺励◆縲・/p>
+                
+                <div class="bg-slate-900/40 p-4 rounded-xl border border-slate-800 text-left w-full mb-5 flex-shrink-0">
+                    <p class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">Battle log</p>
+                    <p class="text-xs md:text-sm font-bold text-white mt-1">Reached sector: <span id="gameover-stage" class="text-red-400"></span></p>
+                </div>
+
+                <button onclick="resetGame()" class="w-full bg-red-950 hover:bg-red-900 text-red-200 font-bold py-2.5 md:py-3 px-6 rounded-xl border border-red-700/50 transition-all uppercase tracking-widest text-xs md:text-sm flex-shrink-0">
+                    繧ｳ繧｢繧貞・讒狗ｯ峨☆繧・(繝ｪ繝医Λ繧､)
+                </button>
+            </div>
+        </div>
+
+        <!-- Victory screen (all clear) -->
+        <div id="temp-victory-screen" class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2">
+            <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-green-500/40 text-center flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+                <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center justify-center mb-3 text-green-400 animate-bounce flex-shrink-0">
+                    <i class="fa-solid fa-trophy text-xl md:text-3xl"></i>
+                </div>
+                <h2 class="text-lg md:text-2xl font-black tracking-widest text-green-400 mb-0.5 uppercase">繧ｳ繧｢荳ｭ譫｢縺ｮ螳悟・遐ｴ螢・(VICTORY)</h2>
+                <p class="text-[10px] md:text-xs text-gray-400 mb-5">蜈ｨ縺ｦ縺ｮ繧ｵ繧､繝舌・繧ｦ繧､繝ｫ繧ｹ縺翫ｈ縺ｳ繧ｳ繧｢縺ｮ繧ｻ繧ｭ繝･繝ｪ繝・ぅ繧堤ｪ∫ｴ縺励∪縺励◆・・/p>
+
+                <button onclick="resetGame()" class="w-full bg-green-950 hover:bg-green-900 text-green-200 font-bold py-2.5 md:py-3 px-6 rounded-xl border border-green-700/50 transition-all uppercase tracking-widest text-xs md:text-sm flex-shrink-0">
+                    Go to the next network hack
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- WebAudio synthesizer -->
+    <script src="audio.js"></script>
+    <script src="param-data.js"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Game logic main JavaScript -->
+    <script src="game.js"></script>
+</body>
+</html>
+
