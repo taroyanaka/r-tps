@@ -268,10 +268,13 @@
       <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" onclick="document.getElementById('help-modal').classList.remove('hidden')">
        Help / Manual
       </button>
-      <div class="w-full border-t border-slate-800 pt-3 mt-1">
+     <div class="w-full border-t border-slate-800 pt-3 mt-1">
        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-mono">
         param.txt
        </p>
+       <button class="w-full mb-2 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-2 px-3 rounded-lg transition-all uppercase tracking-wider" onclick="window._openAllAutoTabs && window._openAllAutoTabs()">
+        Open All AUTO Tabs
+       </button>
        <div class="flex flex-col gap-2" id="param-test-list">
         <p class="text-slate-600 text-xs italic">
          Loading...
@@ -289,6 +292,13 @@
 
                 const render = (configs) => {
                     container.innerHTML = '';
+                    window._openAllAutoTabs = () => {
+                        const baseUrl = window.location.pathname;
+                        configs.forEach(cfg => {
+                            const name = cfg.paramName || 'unknown';
+                            window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=auto`, '_blank');
+                        });
+                    };
                     configs.forEach(cfg => {
                         const name = cfg.paramName || 'unknown';
                         const baseUrl = window.location.pathname;
@@ -301,12 +311,12 @@
 
                         const manualBtn = document.createElement('button');
                         manualBtn.className = 'flex-1 bg-blue-900/50 hover:bg-blue-800/70 border border-blue-500/30 text-blue-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
-                        manualBtn.textContent = '謇句虚';
+                        manualBtn.textContent = 'Manual';
                         manualBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=manual`, '_blank');
 
                         const autoBtn = document.createElement('button');
                         autoBtn.className = 'flex-1 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
-                        autoBtn.textContent = '閾ｪ蜍・';
+                        autoBtn.textContent = 'Auto';
                         autoBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=auto`, '_blank');
 
                         row.appendChild(label);

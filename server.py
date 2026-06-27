@@ -2,12 +2,32 @@ import http.server
 import socketserver
 import json
 import os
+import zipfile
+from datetime import datetime
 from pathlib import Path
 
 PORT = 8000
 LOG_FILE = "log.txt"
 
 class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def _send_json(self, status_code, payload):
+        self.send_response(status_code)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps(payload).encode('utf-8'))
+
+    def _build_results_zip(self):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        zip_name = f"regulation_result_{timestamp}.zip"
+        log_files = sorted(Path('.').glob('*_log.txt'))
+
+        with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for log_file in log_files:
+                zf.write(log_file, arcname=log_file.name)
+
+        return zip_name
+
     def do_GET(self):
         if self.path == '/params':
             try:
@@ -23,14 +43,16 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                         reader = csv.DictReader(f)
                         for row in reader:
                             configs.append(row)
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(configs).encode('utf-8'))
+                self._send_json(200, configs)
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
+        elif self.path == '/zip_results':
+            try:
+                zip_name = self._build_results_zip()
+                self._send_json(200, {"status": "ok", "zip_file": zip_name})
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": str(e)})
         else:
             super().do_GET()
 
@@ -45,11 +67,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 log_file = f"{param_name}_log.txt" if param_name else LOG_FILE
                 with open(log_file, 'a', encoding='utf-8') as f:
                     f.write(message + '\n')
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(b'{"status":"ok"}')
+                self._send_json(200, {"status": "ok"})
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
@@ -62,11 +80,14 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 log_file = f"{param_name}_log.txt" if param_name else LOG_FILE
                 with open(log_file, 'w', encoding='utf-8') as f:
                     f.write('')
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self._send_json(200, {"status": "ok"})
+            except Exception as e:
+                self.send_response(500)
                 self.end_headers()
-                self.wfile.write(b'{"status":"ok"}')
+        elif self.path == '/zip_results':
+            try:
+                zip_name = self._build_results_zip()
+                self._send_json(200, {"status": "ok", "zip_file": zip_name})
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()

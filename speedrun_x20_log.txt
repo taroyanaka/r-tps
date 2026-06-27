@@ -1,0 +1,11 @@
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 2)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 3 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 2 cards)
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.

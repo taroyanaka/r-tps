@@ -1,0 +1,6 @@
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 1 cards)
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.

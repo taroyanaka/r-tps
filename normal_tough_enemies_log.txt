@@ -1,0 +1,7 @@
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 2 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.

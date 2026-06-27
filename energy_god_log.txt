@@ -1,0 +1,9 @@
+[DEBUG-AUTO-AI] Auto-play card: Limit Break (hand slot: 1)
+[DEBUG-PLAY] Card used: Limit Break (cost: 3 / remaining energy: 5.9)
+[DEBUG-EFFECT] Limit Break activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Rebuild and shuffle the draw pile from the discard pile
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 6 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward

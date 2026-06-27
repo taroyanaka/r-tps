@@ -1,0 +1,8 @@
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 2)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.2)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 2 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 2)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 1 cards)
