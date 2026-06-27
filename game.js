@@ -66,6 +66,10 @@
         let selectedNode = null;
         let isAutoMode = false; // Auto mode flag
 
+        // Playwright / external runner can poll this to detect completion.
+        window.__runState = 'idle'; // idle, running, victory, gameover
+        window.__runResult = null;   // victory or gameover
+
         // Player data
         const player = {
             hp: 80,
@@ -428,11 +432,15 @@
                 if (stageText) {
                     stageText.textContent = `Sector ${currentStage}`;
                 }
+                window.__runState = 'gameover';
+                window.__runResult = 'gameover';
             }
             else if (panelType === 'victory') {
                 const temp = document.getElementById('temp-victory-screen').cloneNode(true);
                 temp.removeAttribute('id');
                 panel.appendChild(temp);
+                window.__runState = 'victory';
+                window.__runResult = 'victory';
             }
             else if (panelType === 'battle') {
                 battleTray.classList.remove('translate-y-32');
@@ -1800,6 +1808,8 @@
                     console.warn(e);
                 }
                 cleanupBattle3D();
+                window.__runState = 'gameover';
+                window.__runResult = 'gameover';
                 showPanel('gameover');
             }
         }
@@ -1863,6 +1873,8 @@
         window.startGame = function() {
             if (typeof window.clearLog === 'function') window.clearLog();
             console.log(`[DEBUG-NAV] Game start [PARAM: ${PARAMS.paramName}]`);
+            window.__runState = 'running';
+            window.__runResult = null;
             currentStage = 1;
             player.hp = PARAMS.playerMaxHp;
             player.maxHp = PARAMS.playerMaxHp;
