@@ -1,4 +1,0 @@
-[DEBUG-KILL] Enemy defeated: Sentinel Shield
-[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
-[DEBUG-PANEL] showPanel: reward
-[DEBUG-AUTO] Scheduling auto progression for reward

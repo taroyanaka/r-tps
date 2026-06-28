@@ -1,13 +1,249 @@
+[DEBUG-NAV] Game start [PARAM: easy_fast_energy]
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 10 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [8.6, 12.4]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [-18.1, -6.6]
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 9 cards)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 8 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 7 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 6 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
 [DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
-[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.3)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 3.0)
 [DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
-[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 2 cards)
-[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 5 cards)
+[DEBUG-PLAY] Card used: Dodge Pulse (cost: 1 / remaining energy: 2.0)
+[DEBUG-AUTO-AI] Auto-play card: Dodge Pulse (hand slot: 1)
+[DEBUG-EFFECT] Dodge Pulse activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 4 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 1.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 3 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
 [DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
 [DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
-[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 1 cards)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 2 cards)
 [DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 1 cards)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
 [DEBUG-KILL] Enemy defeated: Sentinel Shield
 [DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
 [DEBUG-PANEL] showPanel: reward
 [DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: Strike+
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 11 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [14.6, 3.4]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.0) at [-13.5, -12.4]
+[DEBUG-DECK] Card drawn: Strike+ (Draw pile remaining: 10 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 9 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 8 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 7 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] Auto-play card: Strike+ (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike+ (cost: 1 / remaining energy: 3.0)
+[DEBUG-EFFECT] Strike+ activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 6 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 2.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 5 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 1.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 4 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 3 cards)
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-AUTO-AI] Auto-play card: Dodge Pulse (hand slot: 2)
+[DEBUG-PLAY] Card used: Dodge Pulse (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Dodge Pulse activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Acid Gas (Draw pile remaining: 2 cards)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 1 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: Shotgun Burst+
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 12 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [12.6, 12.2]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [-13.7, -9.5]
+[DEBUG-DECK] Card drawn: Acid Gas (Draw pile remaining: 11 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 10 cards)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 9 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 8 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] Auto-play card: Acid Gas (hand slot: 1)
+[DEBUG-PLAY] Card used: Acid Gas (cost: 2 / remaining energy: 2.0)
+[DEBUG-EFFECT] Acid Gas activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike+ (Draw pile remaining: 7 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 1.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 6 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 5 cards)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
+[DEBUG-AUTO-AI] Auto-play card: Strike+ (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike+ (cost: 1 / remaining energy: 0.0)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 4 cards)
+[DEBUG-EFFECT] Strike+ activated (Damage multiplier: 1.0x)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: Shotgun Burst
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 13 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 5.8) at [16.9, 0.2]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 5.8) at [-11.0, 14.3]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 5.8) at [-6.9, -16.7]
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 12 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 11 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 10 cards)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 9 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] Auto-play card: Shotgun Burst (hand slot: 1)
+[DEBUG-PLAY] Card used: Shotgun Burst (cost: 2 / remaining energy: 2.0)
+[DEBUG-EFFECT] Shotgun Burst activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 8 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 1.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 7 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-PLAY] Card used: Dodge Pulse (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Dodge Pulse activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 5 cards)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst+ (Draw pile remaining: 4 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 3)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike+ (Draw pile remaining: 3 cards)
+[DEBUG-AUTO-AI] Auto-play card: Shotgun Burst+ (hand slot: 3)
+[DEBUG-PLAY] Card used: Shotgun Burst+ (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Shotgun Burst+ activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 2 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] showPanel: map
+[DEBUG-PANEL] selectRewardCard called: Strike
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-AUTO] Scheduling auto progression for camp
+[DEBUG-AUTO] Executing auto progression for camp, gameState is camp
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 2 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 14 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 3.2) at [18.2, 6.9]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.0) at [-10.3, -14.6]
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 13 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 12 cards)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 11 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 10 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 3.0)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 9 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 2.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 8 cards)
+[DEBUG-AUTO-AI] Auto-play card: Shotgun Burst (hand slot: 1)
+[DEBUG-PLAY] Card used: Shotgun Burst (cost: 2 / remaining energy: 0.0)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 7 cards)
+[DEBUG-EFFECT] Shotgun Burst activated (Damage multiplier: 1.0x)
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 6 cards)
+[DEBUG-KILL] Enemy defeated: Sentinel Shield
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-PANEL] showPanel: reward
+[DEBUG-AUTO] Executing auto progression for reward, gameState is reward
+[DEBUG-AUTO] Found reward options: 3
+[DEBUG-PANEL] selectRewardCard called: Strike
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-AUTO] Scheduling auto progression for reward
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-PANEL] showPanel: camp
+[DEBUG-AUTO] Scheduling auto progression for camp
+[DEBUG-AUTO] Executing auto progression for camp, gameState is camp
+[DEBUG-AUTO] Scheduling auto progression for map
+[DEBUG-PANEL] showPanel: map
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 15 cards
+[DEBUG-SPAWN] 捗 Boss spawned: Mainframe Core (HP: 15.0)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 2.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 8 cards)
+[DEBUG-DECK] Card drawn: Shotgun Burst+ (Draw pile remaining: 14 cards)
+[DEBUG-KILL] Enemy defeated: Mainframe Core (BOSS)
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle_end
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 12 cards)
+[DEBUG-DECK] Card drawn: Limit Break (Draw pile remaining: 13 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 11 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-PLAY] Card used: Shotgun Burst+ (cost: 1 / remaining energy: 3.0)
+[DEBUG-AUTO-AI] Auto-play card: Shotgun Burst+ (hand slot: 1)
+[DEBUG-EFFECT] Shotgun Burst+ activated (Damage multiplier: 1.0x)

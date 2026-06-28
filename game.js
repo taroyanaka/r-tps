@@ -1453,17 +1453,21 @@
                     // 2. Enable auto basic fire
                     isFiring = true;
 
-                    // 3. Auto-play cards as soon as energy is available
-                    if (Math.random() < 0.05) { // Check with a 5% per-frame chance
+                    // 3. Auto-play cards whenever energy is available.
+                    // Keep consuming playable cards to avoid random stalls in automation.
+                    let playedCard = false;
+                    do {
+                        playedCard = false;
                         for (let idx = 0; idx < battleState.hand.length; idx++) {
                             const card = battleState.hand[idx];
                             if (player.energy >= card.cost) {
                                 console.log(`[DEBUG-AUTO-AI] Auto-play card: ${card.name} (hand slot: ${idx+1})`);
                                 useCardIndex(idx);
-                                break; // Prevent duplicate use in the same frame
+                                playedCard = true;
+                                break;
                             }
                         }
-                    }
+                    } while (playedCard && player.energy > 0 && gameState === 'battle');
 
                     // 4. Auto-move (circle the enemy clockwise while adjusting range)
                     const toEnemyX = dx / minDist;
