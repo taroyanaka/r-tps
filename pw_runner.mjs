@@ -7,8 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BASE_URL = process.env.RTPS_URL || 'http://127.0.0.1:8000/cyber_spire.html';
-const CONCURRENCY = Number(process.env.RTPS_CONCURRENCY || 4);
+const CONCURRENCY = Number(process.env.RTPS_CONCURRENCY || 8);
 const TIMEOUT_MS = Number(process.env.RTPS_TIMEOUT_MS || 30 * 60 * 1000);
+const STALL_MS = Number(process.env.RTPS_STALL_MS || 120 * 1000);
 const HEADLESS = process.env.RTPS_HEADLESS !== 'false';
 
 async function loadParams() {
@@ -17,13 +18,37 @@ async function loadParams() {
   return configs.map((cfg) => cfg.paramName).filter(Boolean);
 }
 
-async function waitForCompletion(page, timeoutMs) {
+async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
   const started = Date.now();
+  let lastState = null;
+  let lastUrl = page.url();
+
   while (Date.now() - started < timeoutMs) {
-    const state = await page.evaluate(() => window.__runState || 'idle').catch(() => 'crashed');
-    if (state === 'victory' || state === 'gameover') {
-      return state;
+    const snapshot = await page.evaluate(() => {
+      const state = window.__runState || 'idle';
+      const result = window.__runResult || null;
+      const panel = document.getElementById('main-panel');
+      const panelText = panel ? panel.textContent || '' : '';
+      return { state, result, panelText };
+    }).catch(() => ({ state: 'crashed', result: 'crashed', panelText: '' }));
+
+    const currentUrl = page.url();
+    const stateChanged = snapshot.state !== lastState;
+    const urlChanged = currentUrl !== lastUrl;
+
+    if (stateChanged || urlChanged) {
+      lastState = snapshot.state;
+      lastUrl = currentUrl;
     }
+
+    if (snapshot.state === 'victory' || snapshot.state === 'gameover') {
+      return snapshot.state;
+    }
+
+    if (Date.now() - getLastProgressAt() > stallMs) {
+      throw new Error(`Stalled for more than ${stallMs}ms while state=${snapshot.state}`);
+    }
+
     await page.waitForTimeout(1000);
   }
   throw new Error(`Timed out after ${timeoutMs}ms`);
@@ -32,8 +57,12 @@ async function waitForCompletion(page, timeoutMs) {
 async function runOne(browser, paramName) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   try {
+    let lastProgressAt = Date.now();
+    const bumpProgress = () => { lastProgressAt = Date.now(); };
+
     page.on('console', (msg) => {
       const text = msg.text();
+      bumpProgress();
       if (text.includes('[DEBUG-WIN]') || text.includes('[DEBUG-DEATH]')) {
         console.log(`[${paramName}] ${text}`);
       }
@@ -46,7 +75,7 @@ async function runOne(browser, paramName) {
       timeout: 30000,
     }).catch(() => {});
 
-    const result = await waitForCompletion(page, TIMEOUT_MS);
+    const result = await waitForCompletion(page, TIMEOUT_MS, STALL_MS, () => lastProgressAt);
     console.log(`[${paramName}] ${result}`);
     return { paramName, result };
   } finally {
