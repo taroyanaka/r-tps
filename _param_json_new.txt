@@ -1,0 +1,1 @@
+[{"paramName":"default","playerHp":80,"playerMaxHp":80,"playerEnergy":3.0,"playerMaxEnergy":3,"playerGold":99,"energyRecoveryPerFrame":0.003,"energyRecoveryOnHit":0.15,"autoModeSpeedMult":10,"enemyCountMult":1.0,"enemyHpMult":1.0,"enemyDamageMult":1.0}]

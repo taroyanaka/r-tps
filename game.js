@@ -4,7 +4,7 @@
         const _paramName = _urlParams.get('param') || null;
         const _autoStart = _urlParams.get('mode') === 'auto';
 
-        // Default values synced with the first row of param.txt
+        // Default values synced with the first row of param.json
         const PARAMS = {
             paramName: 'default',
             playerHp: 80,
@@ -15,14 +15,21 @@
             energyRecoveryPerFrame: 0.003,
             energyRecoveryOnHit: 0.15,
             autoModeSpeedMult: 10,
+            enemyCountMult: 1.0,
             enemyHpMult: 1.0,
             enemyDamageMult: 1.0
         };
 
-        // Load from param-data.js when opened locally, or fetch /params when served.
+        // Load from /params when served.
         async function loadParams() {
-            if (_paramName && Array.isArray(window.PARAM_CONFIGS)) {
-                const config = window.PARAM_CONFIGS.find(c => c.paramName === _paramName);
+            if (!_paramName) {
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:8000/params');
+                const configs = await res.json();
+                const config = configs.find(c => c.paramName === _paramName);
                 if (config) {
                     for (const key in config) {
                         if (PARAMS.hasOwnProperty(key)) {
@@ -30,32 +37,12 @@
                             PARAMS[key] = isNaN(raw) ? raw : Number(raw);
                         }
                     }
-                    console.log(`[PARAM] Applied local settings: ${_paramName}`);
+                    console.log(`[PARAM] Applied regulation set: ${_paramName}`);
                 } else {
                     console.log(`[PARAM] Settings not found: ${_paramName}`);
                 }
-                return;
-            }
-
-            if (_paramName) {
-                try {
-                    const res = await fetch('http://localhost:8000/params');
-                    const configs = await res.json();
-                    const config = configs.find(c => c.paramName === _paramName);
-                    if (config) {
-                        for (const key in config) {
-                            if (PARAMS.hasOwnProperty(key)) {
-                                const raw = config[key];
-                                PARAMS[key] = isNaN(raw) ? raw : Number(raw);
-                            }
-                        }
-                        console.log(`[PARAM] Applied regulation set: ${_paramName}`);
-                    } else {
-                        console.log(`[PARAM] Settings not found: ${_paramName}`);
-                    }
-                } catch(e) {
-                    console.log(`[PARAM] Parameter load error: ${e}`);
-                }
+            } catch(e) {
+                console.log(`[PARAM] Parameter load error: ${e}`);
             }
         }
 
@@ -126,7 +113,6 @@
         let mouseX = 0, mouseY = 0;
         let cameraTargetPitch = 0.2; 
         let cameraTargetYaw = 0;   
-        let isPointerLocked = false;
         let isMouseDown = false;   
         let isFiring = false; 
         let normalShootCooldown = 0; 
@@ -192,23 +178,10 @@
 
             window.addEventListener('mousemove', (e) => {
                 if (gameState === 'battle' && !isAutoMode) {
-                    if (isPointerLocked || isMouseDown) {
+                    if (isMouseDown) {
                         cameraTargetYaw -= e.movementX * 0.003;
                         cameraTargetPitch = Math.max(-0.4, Math.min(0.8, cameraTargetPitch - e.movementY * 0.003));
                     }
-                }
-            });
-
-            renderer.domElement.addEventListener('click', (e) => {
-                if (gameState === 'battle' && !isPointerLocked && !isAutoMode) {
-                    renderer.domElement.requestPointerLock();
-                }
-            });
-
-            document.addEventListener('pointerlockchange', () => {
-                isPointerLocked = (document.pointerLockElement === renderer.domElement);
-                if (!isPointerLocked) {
-                    isFiring = false; 
                 }
             });
 
@@ -238,15 +211,6 @@
                     }
                     updateEnemyIntentUI(enemy);
                 });
-            }
-
-            // Release pointer lock in auto mode
-            if (isAutoMode && document.pointerLockElement === renderer.domElement) {
-                try {
-                    document.exitPointerLock();
-                } catch (e) {
-                    console.warn(e);
-                }
             }
 
             updateModeIndicator();
@@ -388,7 +352,7 @@
                 const temp = document.getElementById('temp-start-screen').cloneNode(true);
                 temp.removeAttribute('id');
                 panel.appendChild(temp);
-                // Render the param.txt regulations list dynamically
+                // Render the regulation list dynamically
                 setTimeout(() => {
                     if (typeof window._renderParamTestButtons === 'function') {
                         window._renderParamTestButtons();
@@ -849,6 +813,8 @@
                 spawnBoss();
                 return;
             }
+
+            numEnemies = Math.max(1, Math.round(numEnemies * PARAMS.enemyCountMult));
 
             for (let i = 0; i < numEnemies; i++) {
                 const angle = (i / numEnemies) * Math.PI * 2 + Math.random();
@@ -1499,7 +1465,7 @@
                 if (normalShootCooldown > 0) {
                     normalShootCooldown--;
                 }
-                if (isFiring && (isPointerLocked || isMouseDown) && normalShootCooldown <= 0) {
+                if (isFiring && isMouseDown && normalShootCooldown <= 0) {
                     fireNormalBullet();
                     normalShootCooldown = 12; 
                 }
@@ -1765,14 +1731,6 @@
                 showToast("Battle won! Network barrier destroyed.");
                 
                 // Guard pointer lock release errors
-                try {
-                    if (document && document.pointerLockElement === renderer.domElement) {
-                        document.exitPointerLock();
-                    }
-                } catch (err) {
-                    console.warn("Pointer lock exit ignored (Expected in Sandbox):", err);
-                }
-
                 cleanupBattle3D();
 
                 // Transition to the 2D draft screen after a short delay
@@ -1804,13 +1762,6 @@
             if (player.hp <= 0) {
                 player.hp = 0;
                 console.log(`[DEBUG-DEATH] 逐 Player death detected. System HP depleted 逐`);
-                try {
-                    if (document && document.pointerLockElement === renderer.domElement) {
-                        document.exitPointerLock();
-                    }
-                } catch (e) {
-                    console.warn(e);
-                }
                 cleanupBattle3D();
                 window.__runState = 'gameover';
                 window.__runResult = 'gameover';

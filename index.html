@@ -268,9 +268,9 @@
       <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" onclick="document.getElementById('help-modal').classList.remove('hidden')">
        Help / Manual
       </button>
-     <div class="w-full border-t border-slate-800 pt-3 mt-1">
+      <div class="w-full border-t border-slate-800 pt-3 mt-1">
        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-mono">
-        param.txt
+        param.json
        </p>
        <button class="w-full mb-2 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-2 px-3 rounded-lg transition-all uppercase tracking-wider" onclick="window._openAllAutoTabs && window._openAllAutoTabs()">
         Open All AUTO Tabs
@@ -325,11 +325,6 @@
                         container.appendChild(row);
                     });
                 };
-
-                if (Array.isArray(window.PARAM_CONFIGS)) {
-                    render(window.PARAM_CONFIGS);
-                    return;
-                }
 
                 fetch('http://localhost:8000/params')
                     .then(r => r.json())
@@ -522,8 +517,6 @@
    </div>
   </div>
   <script src="audio.js">
-  </script>
-  <script src="param-data.js">
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
   </script>

@@ -31,22 +31,14 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/params':
             try:
-                import csv
-                configs = []
                 json_path = Path('param.json')
-                txt_path = Path('param.txt')
-                if json_path.exists():
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        configs = json.load(f)
-                elif txt_path.exists():
-                    with open(txt_path, 'r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            configs.append(row)
+                if not json_path.exists():
+                    raise FileNotFoundError('param.json not found')
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    configs = json.load(f)
                 self._send_json(200, configs)
             except Exception as e:
-                self.send_response(500)
-                self.end_headers()
+                self._send_json(500, {"status": "error", "message": str(e)})
         elif self.path == '/zip_results':
             try:
                 zip_name = self._build_results_zip()
