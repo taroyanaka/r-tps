@@ -256,16 +256,25 @@
       </i>
      </div>
      <h1 class="text-xl md:text-2xl font-black tracking-widest text-white mb-0.5 uppercase">
-      CYBER SPIRE
+      <span id="start-title">CYBER SPIRE</span>
      </h1>
      <p class="text-[10px] md:text-xs text-pink-400 font-mono tracking-widest uppercase mb-4">
-      TPS Slay the Spire
+      <span id="start-subtitle">TPS Slay the Spire</span>
      </p>
-     <div class="w-full flex flex-col gap-3">
-      <button class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0" onclick="startGame()">
-       Connect to the network (default)
+     <div class="w-full flex items-center justify-center gap-2 mb-3">
+      <span class="text-[10px] text-slate-500 uppercase tracking-widest font-mono" id="language-label">Language</span>
+      <button class="lang-toggle-btn px-3 py-1.5 rounded-lg border border-slate-700 text-[10px] font-mono uppercase tracking-widest transition-all bg-slate-800 text-slate-300 hover:bg-slate-700" data-lang="en" type="button">
+       English
       </button>
-      <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" onclick="document.getElementById('help-modal').classList.remove('hidden')">
+      <button class="lang-toggle-btn px-3 py-1.5 rounded-lg border border-slate-700 text-[10px] font-mono uppercase tracking-widest transition-all bg-slate-800 text-slate-300 hover:bg-slate-700" data-lang="ja" type="button">
+       日本語
+      </button>
+     </div>
+     <div class="w-full flex flex-col gap-3">
+      <button class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0" id="start-game-btn" onclick="startGame()">
+       Connect to the Network
+      </button>
+      <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" id="help-btn" onclick="document.getElementById('help-modal').classList.remove('hidden')">
        Help / Manual
       </button>
       <div class="w-full border-t border-slate-800 pt-3 mt-1">

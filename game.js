@@ -20,6 +20,58 @@
             enemyDamageMult: 1.0
         };
 
+        const LANG_STORAGE_KEY = 'cyber_spire_language';
+        const LANGUAGE_TEXT = {
+            en: {
+                startTitle: 'CYBER SPIRE',
+                startSubtitle: 'TPS Deckbuilder inspired by Slay the Spire',
+                startButton: 'Connect to the Network',
+                helpButton: 'Help / Manual',
+                languageLabel: 'Language'
+            },
+            ja: {
+                startTitle: 'サイバースパイア',
+                startSubtitle: 'Slay the Spireに触発されたTPSデッキ構築ゲーム',
+                startButton: 'ネットワークに接続',
+                helpButton: 'ヘルプ / マニュアル',
+                languageLabel: '言語'
+            }
+        };
+        let currentLanguage = localStorage.getItem(LANG_STORAGE_KEY) || 'ja';
+        if (!LANGUAGE_TEXT[currentLanguage]) currentLanguage = 'ja';
+
+        function setLanguage(lang) {
+            if (!LANGUAGE_TEXT[lang]) return;
+            currentLanguage = lang;
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+            document.documentElement.lang = lang;
+            updateStartScreenLanguage();
+        }
+
+        function updateStartScreenLanguage() {
+            const text = LANGUAGE_TEXT[currentLanguage] || LANGUAGE_TEXT.ja;
+            const title = document.getElementById('start-title');
+            const subtitle = document.getElementById('start-subtitle');
+            const startBtn = document.getElementById('start-game-btn');
+            const helpBtn = document.getElementById('help-btn');
+            const languageLabel = document.getElementById('language-label');
+
+            if (title) title.textContent = text.startTitle;
+            if (subtitle) subtitle.textContent = text.startSubtitle;
+            if (startBtn) startBtn.textContent = text.startButton;
+            if (helpBtn) helpBtn.textContent = text.helpButton;
+            if (languageLabel) languageLabel.textContent = text.languageLabel;
+
+            document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
+                const isActive = btn.dataset.lang === currentLanguage;
+                btn.classList.toggle('bg-pink-500', isActive);
+                btn.classList.toggle('border-pink-400', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('bg-slate-800', !isActive);
+                btn.classList.toggle('text-slate-300', !isActive);
+            });
+        }
+
         // Load from /params when served.
         async function loadParams() {
             if (!_paramName) {
@@ -136,6 +188,7 @@
 
             initThree();
             setupInitialDeck();
+            document.documentElement.lang = currentLanguage;
 
             if (_autoStart) {
                 startGame();
@@ -352,12 +405,16 @@
                 const temp = document.getElementById('temp-start-screen').cloneNode(true);
                 temp.removeAttribute('id');
                 panel.appendChild(temp);
+                temp.querySelectorAll('.lang-toggle-btn').forEach(btn => {
+                    btn.onclick = () => setLanguage(btn.dataset.lang);
+                });
                 // Render the regulation list dynamically
                 setTimeout(() => {
                     if (typeof window._renderParamTestButtons === 'function') {
                         window._renderParamTestButtons();
                     }
                 }, 50);
+                updateStartScreenLanguage();
             } 
             else if (panelType === 'map') {
                 const temp = document.getElementById('temp-map-screen').cloneNode(true);
