@@ -1,6 +1,6 @@
 import re
 
-with open('cyber_spire.html', 'r', encoding='utf-8') as f:
+with open('index.html', 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Extract style
@@ -23,7 +23,7 @@ if len(script_matches) >= 2:
         f.write(game_script.group(1))
     content = content.replace(game_script.group(0), '<script src="game.js"></script>')
 
-with open('cyber_spire.html', 'w', encoding='utf-8') as f:
+with open('index.html', 'w', encoding='utf-8') as f:
     f.write(content)
 
 print("Split completed successfully.")

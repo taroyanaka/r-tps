@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = process.env.RTPS_URL || 'http://127.0.0.1:8000/cyber_spire.html';
+const BASE_URL = process.env.RTPS_URL || 'http://127.0.0.1:8000/index.html';
 const CONCURRENCY = Number(process.env.RTPS_CONCURRENCY || 8);
 const TIMEOUT_MS = Number(process.env.RTPS_TIMEOUT_MS || 30 * 60 * 1000);
 const STALL_MS = Number(process.env.RTPS_STALL_MS || 120 * 1000);
@@ -27,9 +27,10 @@ async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
     const snapshot = await page.evaluate(() => {
       const state = window.__runState || 'idle';
       const result = window.__runResult || null;
+      const playerHp = window.player?.hp ?? null;
       const panel = document.getElementById('main-panel');
       const panelText = panel ? panel.textContent || '' : '';
-      return { state, result, panelText };
+      return { state, result, playerHp, panelText };
     }).catch(() => ({ state: 'crashed', result: 'crashed', panelText: '' }));
 
     const currentUrl = page.url();
@@ -41,7 +42,10 @@ async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
       lastUrl = currentUrl;
     }
 
-    if (snapshot.state === 'victory' || snapshot.state === 'gameover') {
+    if (snapshot.state === 'victory' || snapshot.state === 'gameover' || snapshot.playerHp === 0) {
+      if (snapshot.playerHp === 0 && snapshot.state !== 'gameover') {
+        return 'gameover';
+      }
       return snapshot.state;
     }
 
@@ -71,7 +75,12 @@ async function runOne(browser, paramName) {
     const url = `${BASE_URL}?param=${encodeURIComponent(paramName)}&mode=auto`;
     await page.goto(url, { waitUntil: 'networkidle' });
 
-    await page.waitForFunction(() => window.__runState === 'running' || window.__runState === 'victory' || window.__runState === 'gameover', null, {
+    await page.waitForFunction(() => {
+      return window.__runState === 'running' ||
+        window.__runState === 'victory' ||
+        window.__runState === 'gameover' ||
+        (window.player && window.player.hp <= 0);
+    }, null, {
       timeout: 30000,
     }).catch(() => {});
 
