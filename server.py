@@ -7,7 +7,10 @@ from datetime import datetime
 from pathlib import Path
 
 PORT = 8000
-LOG_FILE = "log.txt"
+LOG_DIR = Path('log')
+# ensure log directory exists
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE_NAME = "log.txt"
 
 class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def _send_json(self, status_code, payload):
@@ -20,7 +23,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def _build_results_zip(self):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         zip_name = f"regulation_result_{timestamp}.zip"
-        log_files = sorted(Path('.').glob('*_log.txt'))
+        log_files = sorted(LOG_DIR.glob('*_log.txt'))
 
         with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
             for log_file in log_files:
@@ -56,8 +59,8 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 message = data.get('message', '')
                 param_name = data.get('param_name', None)
-                log_file = f"{param_name}_log.txt" if param_name else LOG_FILE
-                with open(log_file, 'a', encoding='utf-8') as f:
+                log_file_path = LOG_DIR / (f"{param_name}_log.txt" if param_name else LOG_FILE_NAME)
+                with open(log_file_path, 'a', encoding='utf-8') as f:
                     f.write(message + '\n')
                 self._send_json(200, {"status": "ok"})
             except Exception as e:
@@ -69,8 +72,8 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data.decode('utf-8'))
                 param_name = data.get('param_name', None)
-                log_file = f"{param_name}_log.txt" if param_name else LOG_FILE
-                with open(log_file, 'w', encoding='utf-8') as f:
+                log_file_path = LOG_DIR / (f"{param_name}_log.txt" if param_name else LOG_FILE_NAME)
+                with open(log_file_path, 'w', encoding='utf-8') as f:
                     f.write('')
                 self._send_json(200, {"status": "ok"})
             except Exception as e:

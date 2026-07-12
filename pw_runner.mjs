@@ -11,11 +11,25 @@ const CONCURRENCY = Number(process.env.RTPS_CONCURRENCY || 8);
 const TIMEOUT_MS = Number(process.env.RTPS_TIMEOUT_MS || 30 * 60 * 1000);
 const STALL_MS = Number(process.env.RTPS_STALL_MS || 120 * 1000);
 const HEADLESS = process.env.RTPS_HEADLESS !== 'false';
+const LOG_DIR = path.join(__dirname, 'log');
+const RTPS_ONLY_NONVICTORY = '1';
 
 async function loadParams() {
   const raw = await fs.readFile(path.join(__dirname, 'param.json'), 'utf8');
   const configs = JSON.parse(raw);
   return configs.map((cfg) => cfg.paramName).filter(Boolean);
+}
+
+async function hasVictoryLog(paramName) {
+  try {
+    const p = path.join(LOG_DIR, `${paramName}_log.txt`);
+    const exists = await fs.stat(p).then(() => true).catch(() => false);
+    if (!exists) return false;
+    const content = await fs.readFile(p, 'utf8');
+    return /showPanel: victory|\[DEBUG-WIN\]|\bvictory\b/i.test(content);
+  } catch (e) {
+    return false;
+  }
 }
 
 async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
@@ -124,9 +138,18 @@ async function zipResults() {
 
 async function main() {
   const params = await loadParams();
+  let runParams = params;
+  if (process.env.RTPS_ONLY_NONVICTORY === '1' || process.env.RTPS_ONLY_NONVICTORY === 'true') {
+    runParams = [];
+    for (const p of params) {
+      const hasV = await hasVictoryLog(p);
+      if (!hasV) runParams.push(p);
+    }
+    console.log(`Filtered params: ${runParams.length} / ${params.length} (only non-victory)`);
+  }
   const browser = await chromium.launch({ headless: HEADLESS });
   try {
-    const results = await runPool(browser, params, CONCURRENCY);
+    const results = await runPool(browser, runParams, CONCURRENCY);
     console.log(JSON.stringify(results, null, 2));
   } finally {
     await browser.close().catch(() => {});

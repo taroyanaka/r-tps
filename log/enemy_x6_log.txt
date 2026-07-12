@@ -1,0 +1,58 @@
+[DEBUG-AUTO] Executing auto progression for map, gameState is map
+[DEBUG-AUTO] Found 1 map buttons
+[DEBUG-PANEL] showPanel: battle
+[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: 10 cards
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [16.9, 7.7]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [1.7, 16.7]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [-6.2, 14.0]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [-15.0, 10.4]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [-9.5, 14.9]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [-19.0, 3.7]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [-19.0, -2.7]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [-12.7, -9.5]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [0.0, -15.5]
+[DEBUG-SPAWN] Enemy spawned: Glitch Virus (HP: 2.5) at [7.5, -15.3]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [18.6, -5.7]
+[DEBUG-SPAWN] Enemy spawned: Sentinel Shield (HP: 4.0) at [18.5, 4.1]
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 9 cards)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 8 cards)
+[DEBUG-DECK] Card drawn: Acid Gas (Draw pile remaining: 7 cards)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 6 cards)
+[DEBUG-AUTO] Scheduling auto progression for battle
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 1)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 2.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Defense Shield (Draw pile remaining: 5 cards)
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 1)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 1.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Strike (Draw pile remaining: 4 cards)
+[DEBUG-AUTO-AI] Auto-play card: Strike (hand slot: 2)
+[DEBUG-PLAY] Card used: Strike (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Strike activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Dodge Pulse (Draw pile remaining: 3 cards)
+[DEBUG-AUTO] Executing auto progression for battle, gameState is battle
+[DEBUG-KILL] Enemy defeated: Glitch Virus
+[DEBUG-AUTO-AI] Auto-play card: Defense Shield (hand slot: 2)
+[DEBUG-PLAY] Card used: Defense Shield (cost: 1 / remaining energy: 0.0)
+[DEBUG-EFFECT] Defense Shield activated (Damage multiplier: 1.0x)
+[DEBUG-DECK] Card drawn: Shotgun Burst (Draw pile remaining: 2 cards)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 80.0 / Shield: 4.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 78.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 72.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 66.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 60.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 54.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 48.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 42.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 36.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 30.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 24.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 18.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 12.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 6.0 / Shield: 0.0)
+[DEBUG-DAMAGE] Player hit: 6 damage (Remaining HP: 0.0 / Shield: 0.0)
+[DEBUG-DEATH] 逐 Player death detected. System HP depleted 逐
+[DEBUG-PANEL] showPanel: gameover
+[DEBUG-AUTO] Scheduling auto progression for gameover
+[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.

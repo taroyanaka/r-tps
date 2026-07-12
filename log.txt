@@ -1,0 +1,2 @@
+[DEBUG-PANEL] showPanel: start
+[DEBUG-PANEL] showPanel: start
