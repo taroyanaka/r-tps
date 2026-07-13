@@ -3,6 +3,7 @@ import socketserver
 import json
 import os
 import zipfile
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -11,7 +12,7 @@ LOG_DIR = Path('log')
 # ensure log directory exists
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE_NAME = "log.txt"
-PARAM_FILE = Path('param.json')
+DATA_FILE = Path('data.js')
 RESULT_FILE = LOG_DIR / 'result.json'
 
 def _read_json_file(path, default):
@@ -39,6 +40,16 @@ def _save_result_map(result_map):
     ordered = list(result_map.values())
     _write_json_file(RESULT_FILE, ordered)
 
+def _load_embedded_data():
+    if not DATA_FILE.exists():
+        return [], {}
+    raw = DATA_FILE.read_text(encoding='utf-8')
+    params_match = re.search(r'window\.RTPS_PARAM_LIST\s*=\s*(\[[\s\S]*?\]);\s*$', raw)
+    cards_match = re.search(r'window\.RTPS_CARD_DATA\s*=\s*(\{[\s\S]*?\});\s*window\.RTPS_PARAM_LIST', raw)
+    params = json.loads(params_match.group(1)) if params_match else []
+    cards = json.loads(cards_match.group(1)) if cards_match else {}
+    return params, cards
+
 class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def _send_json(self, status_code, payload):
         self.send_response(status_code)
@@ -63,9 +74,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/params':
             try:
-                if not PARAM_FILE.exists():
-                    raise FileNotFoundError('param.json not found')
-                configs = _read_json_file(PARAM_FILE, [])
+                configs, _cards = _load_embedded_data()
                 self._send_json(200, configs)
             except Exception as e:
                 self._send_json(500, {"status": "error", "message": str(e)})

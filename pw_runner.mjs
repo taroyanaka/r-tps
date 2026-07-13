@@ -61,8 +61,12 @@ async function clearLogDir() {
 }
 
 async function loadParams() {
-  const raw = await fs.readFile(path.join(__dirname, 'param.json'), 'utf8');
-  return JSON.parse(raw);
+  const raw = await fs.readFile(path.join(__dirname, 'data.js'), 'utf8');
+  const match = raw.match(/window\.RTPS_PARAM_LIST\s*=\s*(\[[\s\S]*?\]);\s*$/);
+  if (!match) {
+    throw new Error('RTPS_PARAM_LIST not found in data.js');
+  }
+  return JSON.parse(match[1]);
 }
 
 async function loadResults() {

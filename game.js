@@ -4,7 +4,7 @@
         const _paramName = _urlParams.get('param') || null;
         const _autoStart = _urlParams.get('mode') === 'auto';
 
-        // Default values synced with the first row of param.json
+        // Default values synced with the first regulation row.
         const PARAMS = {
             paramName: 'default',
             playerHp: 80,
@@ -127,12 +127,7 @@
             }
 
             try {
-                const configs = Array.isArray(window.RTPS_PARAM_LIST)
-                    ? window.RTPS_PARAM_LIST
-                    : await fetch('param.json').then(res => {
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        return res.json();
-                    });
+                const configs = Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST : [];
                 const config = configs.find(c => c.paramName === _paramName);
                 if (config) {
                     for (const key in config) {
@@ -218,10 +213,8 @@
 
         async function loadCardData() {
             try {
-                CARD_DATA = window.RTPS_CARD_DATA || await fetch('cards.json').then(res => {
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    return res.json();
-                });
+                CARD_DATA = window.RTPS_CARD_DATA || null;
+                if (!CARD_DATA) throw new Error('RTPS_CARD_DATA is missing');
 
                 CARDS = CARD_DATA.cards || {};
                 UPGRADES = {};
