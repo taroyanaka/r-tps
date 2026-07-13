@@ -124,6 +124,30 @@
             return card;
         }
 
+        function buildInitialDeck() {
+            const fixedDeck = [
+                { id: 'strike', upgraded: false },
+                { id: 'strike', upgraded: false },
+                { id: 'strike', upgraded: false },
+                { id: 'defend', upgraded: false },
+                { id: 'defend', upgraded: false },
+                { id: 'defend', upgraded: false },
+                { id: 'shotgun', upgraded: false },
+                { id: 'limit', upgraded: false }
+            ];
+            const excluded = new Set(['strike', 'defend', 'shotgun', 'limit']);
+            const pool = Object.keys(CARDS).filter(cardId => {
+                const card = CARDS[cardId];
+                return card && card.type !== 'curse' && !excluded.has(cardId);
+            });
+            const randomAdds = [];
+            while (randomAdds.length < 12 && pool.length > 0) {
+                const cardId = pool[Math.floor(Math.random() * pool.length)];
+                randomAdds.push({ id: cardId, upgraded: false });
+            }
+            return fixedDeck.concat(randomAdds);
+        }
+
         function getPoolForType(poolType) {
             return Object.keys(CARDS).filter(cardId => {
                 const poolTypes = Array.isArray(CARDS[cardId].poolType) ? CARDS[cardId].poolType : [];
@@ -220,7 +244,6 @@
                 }
                 if (!REWARD_POOL.includes('overclock')) REWARD_POOL.push('overclock');
                 if (!SHOP_POOL.includes('overclock')) SHOP_POOL.push('overclock');
-                INITIAL_DECK = Array.isArray(CARD_DATA.initialDeck) ? CARD_DATA.initialDeck : [];
                 REWARD_POOL = Array.isArray(CARD_DATA.rewardPool) && CARD_DATA.rewardPool.length > 0
                     ? CARD_DATA.rewardPool
                     : getPoolForType('reward');
@@ -235,8 +258,6 @@
                     strike: { id: 'strike', name: 'Strike', cost: 1, type: 'attack', text: 'Fire a cyan laser 3 times for 6 damage each.', colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20' },
                     shotgun: { id: 'shotgun', name: 'Shotgun Burst', cost: 2, type: 'attack', text: 'Fire 8 spread shots at close range. Devastating damage up close.', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
                     defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
-                    dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
-                    poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a straight poison round. On enemy impact, release a corrosive green gas dome.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
                     limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' },
                     overclock: { id: 'overclock', name: 'Overclock', cost: 1, type: 'skill', text: 'Increase energy recovery for a short time.', colorClass: 'border-indigo-500 text-indigo-400 bg-indigo-950/20', rarity: 'uncommon', poolType: ['reward', 'shop'], effect: { kind: 'energy_recovery_boost', recoveryBonus: 0.01, durationFrames: 180, toast: 'Energy recovery boosted!' }, upgrade: { name: 'Overclock+', cost: 0, text: 'Increase energy recovery more for a short time.' } },
                     corruption: { id: 'corruption', name: 'Corruption', cost: 1, type: 'curse', text: 'A contaminated card that can be purified for a small amount of energy.', colorClass: 'border-violet-500 text-violet-400 bg-violet-950/20', rarity: 'common', poolType: [], effect: { kind: 'status_corruption_cleanse' } }
@@ -245,22 +266,8 @@
                     strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
                     shotgun: { name: 'Shotgun Burst+', cost: 1, text: 'Low cost. Fire 8 spread shots at close range.' },
                     defend: { name: 'Defense Shield+', text: 'Gain +16 block.' },
-                    dodge: { name: 'Dodge Pulse+', cost: 0, text: 'No cost. Dash, invulnerable. Draw 1 card.' },
-                    poison: { name: 'Acid Gas+', text: 'A stronger straight poison attack. Severely corrodes the impact area.' },
                     limit: { name: 'Limit Break+', cost: 2, text: 'Low cost. Increase all card damage by +100%.' }
                 };
-                INITIAL_DECK = [
-                    { id: 'strike', upgraded: false },
-                    { id: 'strike', upgraded: false },
-                    { id: 'strike', upgraded: false },
-                    { id: 'defend', upgraded: false },
-                    { id: 'defend', upgraded: false },
-                    { id: 'defend', upgraded: false },
-                    { id: 'dodge', upgraded: false },
-                    { id: 'shotgun', upgraded: false },
-                    { id: 'poison', upgraded: false },
-                    { id: 'limit', upgraded: false }
-                ];
                 REWARD_POOL = getPoolForType('reward');
                 SHOP_POOL = getPoolForType('shop');
             }
@@ -447,7 +454,7 @@
 
         // --- Initial deck setup ---
         function setupInitialDeck() {
-            player.deck = INITIAL_DECK.map(card => cloneCardDefinition(card.id, card.upgraded));
+            player.deck = buildInitialDeck().map(card => cloneCardDefinition(card.id, card.upgraded));
             updateTopBarUI();
         }
 
@@ -830,7 +837,7 @@
             const shopPool = [
                 { card: pickRandomCardFromPool('shop', 0), cost: 40 },
                 { card: pickRandomCardFromPool('shop', 0.4), cost: 65 },
-                { card: cloneCardDefinition('dodge', false), cost: 45 },
+                { card: pickRandomCardFromPool('shop', 0.2), cost: 45 },
                 { card: null, type: 'heal', cost: 25, label: 'Full System Repair Patch', desc: 'Restore HP to the maximum.' }
             ];
 
@@ -1325,15 +1332,6 @@
                 });
                 battleState.particles = [];
             }
-            if (battleState.acidDomes) {
-                battleState.acidDomes.forEach(d => {
-                    scene.remove(d.mesh);
-                    d.mesh.geometry.dispose();
-                    d.mesh.material.dispose();
-                });
-                battleState.acidDomes = [];
-            }
-
             if (battleState.shieldMesh) {
                 scene.remove(battleState.shieldMesh);
                 battleState.shieldMesh.geometry.dispose();
@@ -1437,19 +1435,6 @@
                 player.shield += defAmt;
                 spawnShieldVFX();
             } 
-            else if (card.id === 'dodge') {
-                playSFX('dodge');
-                const velX = Math.sin(playerMesh.userData.facingAngle);
-                const velZ = Math.cos(playerMesh.userData.facingAngle);
-                playerMesh.position.x += velX * 8;
-                playerMesh.position.z += velZ * 8;
-                battleState.invulnTimer = 30;
-                drawCard();
-            } 
-            else if (card.id === 'poison') {
-                playSFX('shoot');
-                firePoisonShell(card.upgraded);
-            } 
             else if (card.id === 'limit') {
                 playSFX('buff');
                 player.damageMult += 1.0;
@@ -1522,9 +1507,6 @@
                 }
                 case 'draw_only':
                     for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
-                    return true;
-                case 'poison_shell':
-                    firePoisonShell(upgraded);
                     return true;
                 case 'damage_multiplier':
                     player.damageMult += effectValue || 0;
@@ -1746,49 +1728,6 @@
                 velocity: velocity,
                 damage: damage,
                 life: 60
-            });
-        }
-
-        function firePoisonShell(isUpgraded) {
-            const targetY = cameraTargetYaw;
-            const velocity = new THREE.Vector3(
-                Math.sin(targetY) * 0.35,
-                0,
-                Math.cos(targetY) * 0.35
-            );
-
-            const geom = new THREE.SphereGeometry(0.4, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
-            const mesh = new THREE.Mesh(geom, mat);
-            mesh.position.copy(playerMesh.position);
-            mesh.position.y = 1.0;
-            scene.add(mesh);
-
-            battleState.projectiles.push({
-                type: 'poison_shell',
-                mesh: mesh,
-                velocity: velocity,
-                damage: isUpgraded ? 4 : 2,
-                life: 120
-            });
-        }
-
-        if (!battleState.acidDomes) battleState.acidDomes = [];
-        
-        function createAcidDome(pos, damage) {
-            const geom = new THREE.SphereGeometry(4.5, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-            const edges = new THREE.EdgesGeometry(geom);
-            const mat = new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.3 });
-            const mesh = new THREE.LineSegments(edges, mat);
-            mesh.position.copy(pos);
-            mesh.position.y = 0;
-            scene.add(mesh);
-
-            battleState.acidDomes.push({
-                mesh: mesh,
-                position: mesh.position,
-                damage: damage,
-                life: 240
             });
         }
 
@@ -2140,25 +2079,12 @@
                     if (p.type.startsWith('player')) {
                         for (let eIdx = battleState.enemies.length - 1; eIdx >= 0; eIdx--) {
                             const enemy = battleState.enemies[eIdx];
-                            const dist = p.type === 'poison_shell'
-                                ? new THREE.Vector3(
-                                    p.mesh.position.x - enemy.position.x,
-                                    0,
-                                    p.mesh.position.z - enemy.position.z
-                                ).length()
-                                : p.mesh.position.distanceTo(enemy.position);
+                            const dist = p.mesh.position.distanceTo(enemy.position);
 
-                            if (dist < (enemy.userData.radius + (p.type === 'poison_shell' ? 1.0 : 0.4))) {
+                            if (dist < (enemy.userData.radius + 0.4)) {
                                 playSFX('hit');
-                                if (p.type === 'poison_shell') {
-                                    const domePos = enemy.position.clone();
-                                    domePos.y = 0;
-                                    createAcidDome(domePos, p.damage);
-                                    spawnHitSpark(p.mesh.position, 0x22c55e);
-                                } else {
-                                    enemy.userData.hp -= p.damage;
-                                    spawnHitSpark(p.mesh.position, 0x06b6d4);
-                                }
+                                enemy.userData.hp -= p.damage;
+                                spawnHitSpark(p.mesh.position, 0x06b6d4);
                                 if (battleState.onHitShieldGain) {
                                     player.shield += battleState.onHitShieldGain.amount || 0;
                                     spawnShieldVFX();
@@ -2199,30 +2125,7 @@
                 }
             }
 
-            // --- 5. Poison gas dome handling ---
-            for (let dIdx = battleState.acidDomes.length - 1; dIdx >= 0; dIdx--) {
-                const dome = battleState.acidDomes[dIdx];
-                dome.life--;
-
-                if (dome.life % 20 === 0) {
-                    battleState.enemies.forEach(enemy => {
-                        const dist = enemy.position.distanceTo(dome.position);
-                        if (dist < 4.5) {
-                            enemy.userData.hp -= dome.damage;
-                            spawnHitSpark(enemy.position, 0x22c55e);
-                        }
-                    });
-                }
-
-                if (dome.life <= 0) {
-                    scene.remove(dome.mesh);
-                    dome.mesh.geometry.dispose();
-                    dome.mesh.material.dispose();
-                    battleState.acidDomes.splice(dIdx, 1);
-                }
-            }
-
-            // --- 6. Enemy AI, movement, and actions ---
+            // --- 5. Enemy AI, movement, and actions ---
             for (let eIdx = battleState.enemies.length - 1; eIdx >= 0; eIdx--) {
                 const enemy = battleState.enemies[eIdx];
 
