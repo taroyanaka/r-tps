@@ -43,6 +43,10 @@ npm run playwright:run
 RTPS_ONLY_NONVICTORY=1 RTPS_CONCURRENCY=4 npm run playwright:run
 ```
 
+```power shell
+cmd /c "set RTPS_ONLY_NONVICTORY=1&& set RTPS_CONCURRENCY=4&& npm run playwright:run"
+```
+
 `RTPS_ONLY_NONVICTORY` の挙動
 - `pw_runner.mjs` は `log/` 内の `paramName_log.txt` を読み、以下のパターンで victory を検出します:
   - `showPanel: victory`

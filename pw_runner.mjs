@@ -1,5 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createWriteStream } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -12,32 +14,88 @@ const TIMEOUT_MS = Number(process.env.RTPS_TIMEOUT_MS || 30 * 60 * 1000);
 const STALL_MS = Number(process.env.RTPS_STALL_MS || 120 * 1000);
 const HEADLESS = process.env.RTPS_HEADLESS !== 'false';
 const LOG_DIR = path.join(__dirname, 'log');
-const RTPS_ONLY_NONVICTORY = '1';
+const RESULT_FILE = path.join(LOG_DIR, 'result.json');
+const RUN_LOG_FILE = path.join(LOG_DIR, `playwright_run_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`);
+
+let runLogStream = null;
+let ownedServerProcess = null;
+let shuttingDown = false;
+
+function isShutdownError(error) {
+  const message = String(error?.name || '') + ' ' + String(error?.message || error || '');
+  return shuttingDown || /AbortError|Interrupted|SIGINT|shutting down/i.test(message);
+}
+
+function requestShutdown(reason = 'interrupted') {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  writeRunLogLine(`[RUN] ${reason}`);
+  stopOwnedServer().catch(() => {});
+}
+
+function writeRunLogLine(line) {
+  const output = String(line).replace(/\r?\n$/, '');
+  process.stdout.write(output + '\n');
+  if (runLogStream) {
+    runLogStream.write(output + '\n');
+  }
+}
+
+function writeRunErrorLine(line) {
+  const output = String(line).replace(/\r?\n$/, '');
+  process.stderr.write(output + '\n');
+  if (runLogStream) {
+    runLogStream.write(output + '\n');
+  }
+}
+
+async function clearLogDir() {
+  await fs.mkdir(LOG_DIR, { recursive: true });
+  const entries = await fs.readdir(LOG_DIR, { withFileTypes: true });
+  await Promise.all(entries.map(async (entry) => {
+    const fullPath = path.join(LOG_DIR, entry.name);
+    if (entry.isFile() && entry.name !== 'result.json') {
+      await fs.rm(fullPath, { force: true });
+    }
+  }));
+}
 
 async function loadParams() {
   const raw = await fs.readFile(path.join(__dirname, 'param.json'), 'utf8');
-  const configs = JSON.parse(raw);
-  return configs.map((cfg) => cfg.paramName).filter(Boolean);
+  return JSON.parse(raw);
 }
 
-async function hasVictoryLog(paramName) {
+async function loadResults() {
   try {
-    const p = path.join(LOG_DIR, `${paramName}_log.txt`);
-    const exists = await fs.stat(p).then(() => true).catch(() => false);
-    if (!exists) return false;
-    const content = await fs.readFile(p, 'utf8');
-    return /showPanel: victory|\[DEBUG-WIN\]|\bvictory\b/i.test(content);
-  } catch (e) {
-    return false;
+    const raw = await fs.readFile(RESULT_FILE, 'utf8');
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items)) return [];
+    return items.filter((cfg) => cfg && cfg.paramName);
+  } catch {
+    return [];
   }
+}
+
+async function saveResults(results) {
+  await fs.mkdir(LOG_DIR, { recursive: true });
+  await fs.writeFile(RESULT_FILE, JSON.stringify(results, null, 2), 'utf8');
 }
 
 async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
   const started = Date.now();
   let lastState = null;
   let lastUrl = page.url();
+  let pageClosed = false;
+  page.once('close', () => {
+    pageClosed = true;
+  });
 
   while (Date.now() - started < timeoutMs) {
+    if (shuttingDown) {
+      const err = new Error('Interrupted');
+      err.name = 'AbortError';
+      throw err;
+    }
     const snapshot = await page.evaluate(() => {
       const state = window.__runState || 'idle';
       const result = window.__runResult || null;
@@ -54,6 +112,15 @@ async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
     if (stateChanged || urlChanged) {
       lastState = snapshot.state;
       lastUrl = currentUrl;
+    }
+
+    if (pageClosed || snapshot.state === 'crashed') {
+      if (shuttingDown) {
+        const err = new Error('Interrupted');
+        err.name = 'AbortError';
+        throw err;
+      }
+      throw new Error('Page crashed');
     }
 
     if (snapshot.state === 'victory' || snapshot.state === 'gameover' || snapshot.playerHp === 0) {
@@ -75,6 +142,11 @@ async function waitForCompletion(page, timeoutMs, stallMs, getLastProgressAt) {
 async function runOne(browser, paramName) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   try {
+    if (shuttingDown) {
+      const err = new Error('Interrupted');
+      err.name = 'AbortError';
+      throw err;
+    }
     let lastProgressAt = Date.now();
     const bumpProgress = () => { lastProgressAt = Date.now(); };
 
@@ -82,12 +154,12 @@ async function runOne(browser, paramName) {
       const text = msg.text();
       bumpProgress();
       if (text.includes('[DEBUG-WIN]') || text.includes('[DEBUG-DEATH]')) {
-        console.log(`[${paramName}] ${text}`);
+        writeRunLogLine(`[${paramName}] ${text}`);
       }
     });
 
     const url = `${BASE_URL}?param=${encodeURIComponent(paramName)}&mode=auto`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
 
     await page.waitForFunction(() => {
       return window.__runState === 'running' ||
@@ -99,7 +171,7 @@ async function runOne(browser, paramName) {
     }).catch(() => {});
 
     const result = await waitForCompletion(page, TIMEOUT_MS, STALL_MS, () => lastProgressAt);
-    console.log(`[${paramName}] ${result}`);
+    writeRunLogLine(`[${paramName}] ${result}`);
     return { paramName, result };
   } finally {
     await page.close().catch(() => {});
@@ -111,14 +183,17 @@ async function runPool(browser, items, concurrency) {
   const results = [];
 
   async function worker() {
-    while (queue.length > 0) {
+    while (queue.length > 0 && !shuttingDown) {
       const paramName = queue.shift();
       if (!paramName) continue;
       try {
         results.push(await runOne(browser, paramName));
       } catch (error) {
+        if (isShutdownError(error)) {
+          return;
+        }
         results.push({ paramName, result: 'error', error: String(error?.message || error) });
-        console.error(`[${paramName}] error:`, error);
+        writeRunErrorLine(`[${paramName}] error: ${error?.stack || String(error)}`);
       }
     }
   }
@@ -136,30 +211,122 @@ async function zipResults() {
   return await res.json();
 }
 
-async function main() {
-  const params = await loadParams();
-  let runParams = params;
-  if (process.env.RTPS_ONLY_NONVICTORY === '1' || process.env.RTPS_ONLY_NONVICTORY === 'true') {
-    runParams = [];
-    for (const p of params) {
-      const hasV = await hasVictoryLog(p);
-      if (!hasV) runParams.push(p);
-    }
-    console.log(`Filtered params: ${runParams.length} / ${params.length} (only non-victory)`);
+async function waitForServerReady(retries = 30, delayMs = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/params');
+      if (res.ok) return;
+    } catch (e) {}
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  const browser = await chromium.launch({ headless: HEADLESS });
+  throw new Error('server did not become ready');
+}
+
+async function startServerIfNeeded() {
   try {
-    const results = await runPool(browser, runParams, CONCURRENCY);
-    console.log(JSON.stringify(results, null, 2));
-  } finally {
-    await browser.close().catch(() => {});
+    const res = await fetch('http://127.0.0.1:8000/params');
+    if (res.ok) {
+      return false;
+    }
+  } catch {}
+
+  ownedServerProcess = spawn('python', ['server.py'], {
+    cwd: __dirname,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+  ownedServerProcess.stdout.on('data', (chunk) => {
+    process.stdout.write(String(chunk));
+  });
+  ownedServerProcess.stderr.on('data', (chunk) => {
+    process.stderr.write(String(chunk));
+  });
+  return true;
+}
+
+async function stopOwnedServer() {
+  if (!ownedServerProcess) return;
+  const proc = ownedServerProcess;
+  ownedServerProcess = null;
+  try {
+    proc.kill();
+  } catch {}
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, 3000);
+    proc.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+async function main() {
+  const onlyNonVictory = process.env.RTPS_ONLY_NONVICTORY === '1' || process.env.RTPS_ONLY_NONVICTORY === 'true';
+  const params = await loadParams();
+  const previousResults = await loadResults();
+  const previousResultMap = new Map(previousResults.map((item) => [item.paramName, item]));
+  let runParams = params;
+  if (onlyNonVictory) {
+    runParams = params.filter((cfg) => previousResultMap.get(cfg.paramName)?.result !== 'victory');
+    writeRunLogLine(`Filtered params: ${runParams.length} / ${params.length} (only non-victory via log/result.json)`);
   }
 
-  const zip = await zipResults();
-  console.log(`ZIP: ${zip.zip_file}`);
+  await clearLogDir();
+  runLogStream = createWriteStream(RUN_LOG_FILE, { flags: 'a' });
+  writeRunLogLine(`[RUN] log dir cleared`);
+  writeRunLogLine(`[RUN] saving stdout/stderr to ${path.basename(RUN_LOG_FILE)}`);
+
+  const startedServer = await startServerIfNeeded();
+  if (startedServer) {
+    writeRunLogLine(`[RUN] started local server.py`);
+  }
+
+  const onSigint = () => requestShutdown('interrupted by Ctrl+C');
+  process.once('SIGINT', onSigint);
+  process.once('SIGTERM', onSigint);
+
+  try {
+    await waitForServerReady();
+    const browser = await chromium.launch({ headless: HEADLESS });
+    const runResults = [];
+    try {
+      const results = await runPool(browser, runParams.map((cfg) => cfg.paramName), CONCURRENCY);
+      runResults.push(...results);
+      writeRunLogLine(JSON.stringify(results, null, 2));
+    } finally {
+      await browser.close().catch(() => {});
+    }
+
+    const mergedResults = [...previousResults];
+    for (const item of runResults) {
+      const idx = mergedResults.findIndex((entry) => entry.paramName === item.paramName);
+      if (idx >= 0) {
+        mergedResults[idx] = item;
+      } else {
+        mergedResults.push(item);
+      }
+    }
+    await saveResults(mergedResults);
+
+    const zip = await zipResults();
+    writeRunLogLine(`ZIP: ${zip.zip_file}`);
+  } finally {
+    process.off('SIGINT', onSigint);
+    process.off('SIGTERM', onSigint);
+    await stopOwnedServer();
+    await new Promise((resolve) => runLogStream?.end(resolve));
+  }
 }
 
 main().catch((error) => {
-  console.error(error);
+  if (isShutdownError(error)) {
+    process.exitCode = 130;
+    return;
+  }
+  writeRunErrorLine(error?.stack || String(error));
   process.exitCode = 1;
+  stopOwnedServer().catch(() => {});
+  if (runLogStream) {
+    runLogStream.end();
+  }
 });

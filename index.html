@@ -16,16 +16,27 @@
 
         const originalLog = console.log;
         const originalError = console.error;
+        function postLog(body) {
+            const payload = JSON.stringify(body);
+            if (navigator.sendBeacon) {
+                try {
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    if (navigator.sendBeacon('http://localhost:8000/log', blob)) return;
+                } catch (e) {}
+            }
+            fetch('http://localhost:8000/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true
+            }).catch(e => {});
+        }
         console.log = function(...args) {
             originalLog.apply(console, args);
             const message = args.map(a => typeof a === 'object' ? (a instanceof Error ? a.stack : JSON.stringify(a)) : String(a)).join(' ');
             const body = { message: message };
             if (_htmlParamName) body.param_name = _htmlParamName;
-            fetch('http://localhost:8000/log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            }).catch(e => {});
+            postLog(body);
         };
         console.error = function(...args) {
             originalError.apply(console, args);
@@ -46,7 +57,8 @@
             fetch('http://localhost:8000/clear_log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
+                keepalive: true
             }).catch(e => {});
         };
   </script>

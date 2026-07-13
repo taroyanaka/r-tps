@@ -20,6 +20,14 @@
             enemyDamageMult: 1.0
         };
 
+        let CARD_DATA = null;
+        let CARDS = {};
+        let UPGRADES = {};
+        let INITIAL_DECK = [];
+        let REWARD_POOL = [];
+        let SHOP_POOL = [];
+        const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
+
         const LANG_STORAGE_KEY = 'cyber_spire_language';
         const LANGUAGE_TEXT = {
             en: {
@@ -98,12 +106,141 @@
             }
         }
 
+        function cloneCardDefinition(cardId, upgraded = false) {
+            const base = CARDS[cardId];
+            if (!base) return null;
+
+            const card = { ...base, upgraded };
+            if (upgraded) {
+                const upgrade = base.upgrade || UPGRADES[cardId];
+                if (upgrade) {
+                    card.name = upgrade.name ?? card.name;
+                    if (upgrade.cost !== undefined) card.cost = upgrade.cost;
+                    card.text = upgrade.text ?? card.text;
+                }
+            }
+            return card;
+        }
+
+        function getPoolForType(poolType) {
+            return Object.keys(CARDS).filter(cardId => {
+                const poolTypes = Array.isArray(CARDS[cardId].poolType) ? CARDS[cardId].poolType : [];
+                return poolTypes.includes(poolType);
+            });
+        }
+
+        function pickWeightedCardId(poolType) {
+            const pool = getPoolForType(poolType);
+            if (pool.length === 0) return null;
+
+            const weighted = [];
+            pool.forEach(cardId => {
+                const rarity = CARDS[cardId].rarity || 'common';
+                const weight = RARITY_WEIGHTS[rarity] || RARITY_WEIGHTS.common;
+                for (let i = 0; i < weight; i++) weighted.push(cardId);
+            });
+
+            return weighted[Math.floor(Math.random() * weighted.length)];
+        }
+
+        function pickRandomCardFromPool(poolType, upgradedChance = 0) {
+            const cardId = pickWeightedCardId(poolType);
+            if (!cardId) return null;
+            return cloneCardDefinition(cardId, Math.random() < upgradedChance);
+        }
+
+        function buildCardTemplate(cardId = 'new_card') {
+            return {
+                id: cardId,
+                name: 'New Card',
+                cost: 1,
+                type: 'attack',
+                text: 'Describe the card effect here.',
+                colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20',
+                rarity: 'common',
+                poolType: ['reward'],
+                effect: {
+                    kind: 'custom_effect_kind'
+                },
+                upgrade: {
+                    name: 'New Card+',
+                    cost: 1,
+                    text: 'Describe the upgraded effect here.'
+                }
+            };
+        }
+
+        window.getCardTemplate = buildCardTemplate;
+
+        async function loadCardData() {
+            try {
+                const res = await fetch('cards.json');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                CARD_DATA = await res.json();
+
+                CARDS = CARD_DATA.cards || {};
+                UPGRADES = {};
+                for (const [cardId, card] of Object.entries(CARDS)) {
+                    if (card.upgrade) {
+                        UPGRADES[cardId] = card.upgrade;
+                    }
+                }
+                INITIAL_DECK = Array.isArray(CARD_DATA.initialDeck) ? CARD_DATA.initialDeck : [];
+                REWARD_POOL = Array.isArray(CARD_DATA.rewardPool) && CARD_DATA.rewardPool.length > 0
+                    ? CARD_DATA.rewardPool
+                    : getPoolForType('reward');
+                SHOP_POOL = Array.isArray(CARD_DATA.shopPool) && CARD_DATA.shopPool.length > 0
+                    ? CARD_DATA.shopPool
+                    : getPoolForType('shop');
+                console.log('[CARD] Card data loaded from cards.json');
+            } catch (e) {
+                console.log(`[CARD] Card data load error: ${e}`);
+                CARDS = {
+                    strike: { id: 'strike', name: 'Strike', cost: 1, type: 'attack', text: 'Fire a cyan laser 3 times for 6 damage each.', colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20' },
+                    shotgun: { id: 'shotgun', name: 'Shotgun Burst', cost: 2, type: 'attack', text: 'Fire 8 spread shots at close range. Devastating damage up close.', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
+                    defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
+                    dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
+                    poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
+                    limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' }
+                };
+                UPGRADES = {
+                    strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
+                    shotgun: { name: 'Shotgun Burst+', cost: 1, text: 'Low cost. Fire 8 spread shots at close range.' },
+                    defend: { name: 'Defense Shield+', text: 'Gain +16 block.' },
+                    dodge: { name: 'Dodge Pulse+', cost: 0, text: 'No cost. Dash, invulnerable. Draw 1 card.' },
+                    poison: { name: 'Acid Gas+', text: 'A stronger poison gas attack. Severely corrodes the impact area.' },
+                    limit: { name: 'Limit Break+', cost: 2, text: 'Low cost. Increase all card damage by +100%.' }
+                };
+                INITIAL_DECK = [
+                    { id: 'strike', upgraded: false },
+                    { id: 'strike', upgraded: false },
+                    { id: 'strike', upgraded: false },
+                    { id: 'defend', upgraded: false },
+                    { id: 'defend', upgraded: false },
+                    { id: 'defend', upgraded: false },
+                    { id: 'dodge', upgraded: false },
+                    { id: 'shotgun', upgraded: false },
+                    { id: 'poison', upgraded: false },
+                    { id: 'limit', upgraded: false }
+                ];
+                REWARD_POOL = getPoolForType('reward');
+                SHOP_POOL = getPoolForType('shop');
+            }
+        }
+
         // --- Game state variables ---
         let gameState = 'start'; // start, map, battle, reward, camp, shop, gameover, victory, battle_end
         let currentStage = 1; 
         const totalStages = 8;
         let selectedNode = null;
         let isAutoMode = false; // Auto mode flag
+        let autoProgressToken = 0; // Invalidates delayed auto-actions after a panel transition
+
+        function debugState(prefix, extra = '') {
+            const battleInfo = ` hand=${battleState.hand.length} draw=${battleState.drawPile.length} discard=${battleState.discardPile.length} enemies=${battleState.enemies.length}`;
+            const playerInfo = ` hp=${player.hp.toFixed(1)}/${player.maxHp} energy=${player.energy.toFixed(1)}/${player.maxEnergy} shield=${player.shield.toFixed(1)} gold=${player.gold}`;
+            console.log(`${prefix} state=${gameState} stage=${currentStage}/${totalStages} auto=${isAutoMode ? 'on' : 'off'}${playerInfo}${battleInfo}${extra ? ` ${extra}` : ''}`);
+        }
 
         // Playwright / external runner can poll this to detect completion.
         window.__runState = 'idle'; // idle, running, victory, gameover
@@ -130,28 +267,13 @@
             projectiles: [],
             particles: [],
             limitBreakCount: 0,
+            tempDamageBuffs: [],
+            drawLockFrames: 0,
+            pendingEnergyBonus: 0,
+            pendingRetaliation: null,
+            onHitShieldGain: null,
             shieldTimer: 0,
             invulnTimer: 0 
-        };
-
-        // Card library
-        const CARDS = {
-            strike: { id: 'strike', name: 'Strike', cost: 1, type: 'attack', text: 'Fire a cyan laser 3 times for 6 damage each.', colorClass: 'border-cyan-500 text-cyan-400 bg-cyan-950/20' },
-            shotgun: { id: 'shotgun', name: 'Shotgun Burst', cost: 2, type: 'attack', text: 'Fire 8 spread shots at close range. Devastating damage up close.', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
-            defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
-            dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
-            poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
-            limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' }
-        };
-
-        // Upgrade variants
-        const UPGRADES = {
-            strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
-            shotgun: { name: 'Shotgun Burst+', cost: 1, text: 'Low cost. Fire 8 spread shots at close range.' },
-            defend: { name: 'Defense Shield+', text: 'Gain +16 block.' },
-            dodge: { name: 'Dodge Pulse+', cost: 0, text: 'No cost. Dash, invulnerable. Draw 1 card.' },
-            poison: { name: 'Acid Gas+', text: 'A stronger poison gas attack. Severely corrodes the impact area.' },
-            limit: { name: 'Limit Break+', cost: 2, text: 'Low cost. Increase all card damage by +100%.' }
         };
 
         // --- 3D graphics state (Three.js) ---
@@ -173,6 +295,7 @@
         // --- Startup initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
             await loadParams();
+            await loadCardData();
 
             // Apply PARAMS to the player defaults
             player.hp = PARAMS.playerHp;
@@ -246,22 +369,25 @@
         function toggleAutoMode() {
             isAutoMode = !isAutoMode;
             console.log(`[DEBUG-MODE] Mode switch: ${isAutoMode ? "AUTO (automated battle)" : "MANUAL (manual control)"}`);
+            debugState('[DEBUG-MODE-STATE]');
             showToast(isAutoMode ? "Auto battle enabled: enemy HP reduced to 1/10." : "Manual battle enabled: enemy HP restored to normal.");
 
             // In battle, scale enemy HP dynamically.
             if (gameState === 'battle' && battleState.enemies) {
                 battleState.enemies.forEach(enemy => {
-                    if (isAutoMode) {
-                        // Reduce HP to 1/10
-                        enemy.userData.hp = Math.max(1, enemy.userData.hp / 10);
-                        enemy.userData.maxHp = Math.max(1, enemy.userData.maxHp / 10);
-                        console.log(`[DEBUG-AI] Enemy weakened (HP 1/10): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
-                    } else {
-                        // Restore HP by 10x
-                        enemy.userData.hp *= 10;
-                        enemy.userData.maxHp *= 10;
-                        console.log(`[DEBUG-AI] Enemy HP restored (10x): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
-                    }
+            if (isAutoMode) {
+                // Reduce HP to 1/10
+                enemy.userData.hp = Math.max(1, enemy.userData.hp / 10);
+                enemy.userData.maxHp = Math.max(1, enemy.userData.maxHp / 10);
+                console.log(`[DEBUG-AI] Enemy weakened (HP 1/10): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
+                debugState('[DEBUG-AI-STATE]', `enemy=${enemy.userData.name} mode=weaken`);
+            } else {
+                // Restore HP by 10x
+                enemy.userData.hp *= 10;
+                enemy.userData.maxHp *= 10;
+                console.log(`[DEBUG-AI] Enemy HP restored (10x): ${enemy.userData.name} (HP: ${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)})`);
+                debugState('[DEBUG-AI-STATE]', `enemy=${enemy.userData.name} mode=restore`);
+            }
                     updateEnemyIntentUI(enemy);
                 });
             }
@@ -285,19 +411,51 @@
 
         // --- Initial deck setup ---
         function setupInitialDeck() {
-            player.deck = [
-                { ...CARDS.strike, upgraded: false },
-                { ...CARDS.strike, upgraded: false },
-                { ...CARDS.strike, upgraded: false },
-                { ...CARDS.defend, upgraded: false },
-                { ...CARDS.defend, upgraded: false },
-                { ...CARDS.defend, upgraded: false },
-                { ...CARDS.dodge, upgraded: false },
-                { ...CARDS.shotgun, upgraded: false },
-                { ...CARDS.poison, upgraded: false },
-                { ...CARDS.limit, upgraded: false }
-            ];
+            player.deck = INITIAL_DECK.map(card => cloneCardDefinition(card.id, card.upgraded));
             updateTopBarUI();
+        }
+
+        function getCurrentDamageMultiplier() {
+            const tempBuff = battleState.tempDamageBuffs.reduce((sum, buff) => sum + (buff.amount || 0), 0);
+            return player.damageMult + tempBuff;
+        }
+
+        function addTempDamageBuff(amount, durationFrames, source = 'temp') {
+            if (!amount) return;
+            battleState.tempDamageBuffs.push({
+                amount,
+                source,
+                life: Math.max(1, durationFrames || 180)
+            });
+            spawnBuffVFX();
+        }
+
+        function addEnergyBonus(amount) {
+            if (!amount) return;
+            battleState.pendingEnergyBonus = (battleState.pendingEnergyBonus || 0) + amount;
+        }
+
+        function handleDrawnCard(card) {
+            if (!card || !card.effect) return;
+            const kind = card.effect.kind;
+            if (kind === 'status_exhaust' || kind === 'status_energy_loss' || kind === 'status_end_damage') {
+                const idx = battleState.hand.indexOf(card);
+                if (idx >= 0) {
+                    battleState.hand.splice(idx, 1);
+                }
+                if (kind === 'status_end_damage') {
+                    const dmg = card.effect.amountBase || 2;
+                    if (damagePlayer(dmg)) return;
+                } else if (kind === 'status_energy_loss') {
+                    player.energy = Math.max(0, player.energy - (card.effect.amountBase || 1));
+                    updateBattleStatsUI();
+                }
+                battleState.discardPile.push(card);
+            }
+        }
+
+        function isStatusCard(card) {
+            return !!card && !!card.effect && String(card.effect.kind || '').startsWith('status_');
         }
 
         // --- 3D setup ---
@@ -390,6 +548,8 @@
         // --- UI switching and screen construction ---
         function showPanel(panelType) {
             console.log(`[DEBUG-PANEL] showPanel: ${panelType}`);
+            autoProgressToken++;
+            debugState('[DEBUG-PANEL-STATE]', `next=${panelType} token=${autoProgressToken}`);
             gameState = panelType;
             const panel = document.getElementById('main-panel');
             const battleTray = document.getElementById('battle-tray');
@@ -476,9 +636,11 @@
             // --- Auto Progression ---
             if (isAutoMode) {
                 console.log(`[DEBUG-AUTO] Scheduling auto progression for ${panelType}`);
+                const scheduledToken = autoProgressToken;
                 setTimeout(() => {
                     console.log(`[DEBUG-AUTO] Executing auto progression for ${panelType}, gameState is ${gameState}`);
-                    if (gameState !== panelType) return;
+                    debugState('[DEBUG-AUTO-STATE]', `panel=${panelType} token=${scheduledToken}/${autoProgressToken}`);
+                    if (scheduledToken !== autoProgressToken || gameState !== panelType) return;
                     try {
                         if (panelType === 'map') {
                             const btns = Array.from(panel.querySelectorAll('#map-nodes-container button:not(.pointer-events-none)'));
@@ -594,11 +756,10 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const cardIds = Object.keys(CARDS);
             const shopPool = [
-                { card: { ...CARDS[cardIds[Math.floor(Math.random() * cardIds.length)]], upgraded: false }, cost: 40 },
-                { card: { ...CARDS[cardIds[Math.floor(Math.random() * cardIds.length)]], upgraded: Math.random() > 0.6 }, cost: 65 },
-                { card: { ...CARDS.dodge, upgraded: false }, cost: 45 },
+                { card: pickRandomCardFromPool('shop', 0), cost: 40 },
+                { card: pickRandomCardFromPool('shop', 0.4), cost: 65 },
+                { card: cloneCardDefinition('dodge', false), cost: 45 },
                 { card: null, type: 'heal', cost: 25, label: 'Full System Repair Patch', desc: 'Restore HP to the maximum.' }
             ];
 
@@ -705,8 +866,8 @@
         function upgradeCard(index) {
             const card = player.deck[index];
             card.upgraded = true;
-            
-            const upDef = UPGRADES[card.id];
+
+            const upDef = UPGRADES[card.id] || (CARDS[card.id] && CARDS[card.id].upgrade);
             if (upDef) {
                 card.name = upDef.name;
                 if (upDef.cost !== undefined) card.cost = upDef.cost;
@@ -736,27 +897,22 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const cardPool = Object.keys(CARDS);
+            const cardPool = REWARD_POOL.length > 0 ? REWARD_POOL : getPoolForType('reward');
             const selected = [];
             while (selected.length < 3) {
-                const rId = cardPool[Math.floor(Math.random() * cardPool.length)];
+                const rId = pickWeightedCardId('reward') || cardPool[Math.floor(Math.random() * cardPool.length)];
                 if (!selected.includes(rId)) {
                     selected.push(rId);
                 }
             }
 
             selected.forEach(cardId => {
-                const card = { ...CARDS[cardId], upgraded: false };
+                const card = cloneCardDefinition(cardId, false);
                 
                 const isUpg = Math.random() < 0.3;
                 if (isUpg) {
-                    card.upgraded = true;
-                    const upDef = UPGRADES[cardId];
-                    if (upDef) {
-                        card.name = upDef.name;
-                        if (upDef.cost !== undefined) card.cost = upDef.cost;
-                        card.text = upDef.text;
-                    }
+                    const upgradedCard = cloneCardDefinition(cardId, true);
+                    if (upgradedCard) Object.assign(card, upgradedCard);
                 }
 
                 const cardDiv = document.createElement('div');
@@ -785,6 +941,7 @@
 
         function selectRewardCard(card) {
             console.log(`[DEBUG-PANEL] selectRewardCard called: ${card.name}`);
+            debugState('[DEBUG-REWARD-STATE]', `picked=${card.name} cost=${card.cost}`);
             player.deck.push(card);
             playSFX('draw');
             currentStage++;
@@ -825,6 +982,7 @@
         // --- Battle phase system (real-time 3D TPS) ---
         function initBattlePhase() {
             console.log(`[DEBUG-INIT] 徴 Battle sector initialized 徴 Deck size: ${player.deck.length} cards`);
+            debugState('[DEBUG-BATTLE-INIT]');
             cleanupBattle3D();
 
             playerMesh.position.set(0, 1.2, 0);
@@ -872,6 +1030,7 @@
             }
 
             numEnemies = Math.max(1, Math.round(numEnemies * PARAMS.enemyCountMult));
+            debugState('[DEBUG-SPAWN-PLAN]', `node=${selectedNode ? selectedNode.type : 'none'} enemies=${numEnemies} hpFactor=${hpFactor.toFixed(2)} speedFactor=${speedFactor.toFixed(2)}`);
 
             for (let i = 0; i < numEnemies; i++) {
                 const angle = (i / numEnemies) * Math.PI * 2 + Math.random();
@@ -940,6 +1099,7 @@
 
             battleState.enemies.push(group);
             console.log(`[DEBUG-SPAWN] Enemy spawned: ${name} (HP: ${maxHp.toFixed(1)}) at [${x.toFixed(1)}, ${z.toFixed(1)}]`);
+            debugState('[DEBUG-SPAWN-STATE]', `enemy=${name} type=${type}`);
         }
 
         function spawnBoss() {
@@ -984,6 +1144,7 @@
 
             battleState.enemies.push(group);
             console.log(`[DEBUG-SPAWN] 捗 Boss spawned: Mainframe Core (HP: ${maxHp.toFixed(1)})`);
+            debugState('[DEBUG-BOSS-STATE]', `enemy=Mainframe Core`);
         }
 
         function createIntentSprite(name) {
@@ -1118,6 +1279,7 @@
 
         function drawCard() {
             if (battleState.hand.length >= 4) return;
+            if (battleState.drawLockFrames > 0) return;
 
             if (battleState.drawPile.length === 0) {
                 if (battleState.discardPile.length === 0) return;
@@ -1126,12 +1288,15 @@
                 battleState.discardPile = [];
                 playSFX('draw');
                 console.log("[DEBUG-DECK] Rebuild and shuffle the draw pile from the discard pile");
+                debugState('[DEBUG-DECK-RESHUFFLE]');
             }
 
             const card = battleState.drawPile.pop();
             battleState.hand.push(card);
             playSFX('draw');
             console.log(`[DEBUG-DECK] Card drawn: ${card.name} (Draw pile remaining: ${battleState.drawPile.length} cards)`);
+            debugState('[DEBUG-DECK-DRAW]', `card=${card.name} upgraded=${!!card.upgraded}`);
+            handleDrawnCard(card);
         }
 
         // --- Card activation system ---
@@ -1142,11 +1307,13 @@
             const card = battleState.hand[index];
             if (player.energy < card.cost) {
                 showToast("Not enough energy!");
+                debugState('[DEBUG-PLAY-BLOCKED]', `card=${card.name} cost=${card.cost}`);
                 return;
             }
 
             player.energy -= card.cost;
             console.log(`[DEBUG-PLAY] Card used: ${card.name} (cost: ${card.cost} / remaining energy: ${player.energy.toFixed(1)})`);
+            debugState('[DEBUG-PLAY-STATE]', `card=${card.name} slot=${index}`);
             triggerCardEffect(card);
 
             battleState.hand.splice(index, 1);
@@ -1159,12 +1326,15 @@
         };
 
         function triggerCardEffect(card) {
-            const mult = player.damageMult;
+            if (applyDataDrivenCardEffect(card)) return;
+
+            const mult = getCurrentDamageMultiplier();
             const dmgStrike = card.upgraded ? 10 : 6;
             const dmgShotgun = card.upgraded ? 7 : 5;
             const defAmt = card.upgraded ? 16 : 10;
 
             console.log(`[DEBUG-EFFECT] ${card.name} activated (Damage multiplier: ${mult.toFixed(1)}x)`);
+            debugState('[DEBUG-EFFECT-STATE]', `card=${card.name}`);
 
             if (card.id === 'strike') {
                 playSFX('strike');
@@ -1205,6 +1375,186 @@
                 player.damageMult += 1.0;
                 showToast("All card damage increased by +100%!");
                 spawnBuffVFX();
+            }
+        }
+
+        function applyDataDrivenCardEffect(card) {
+            const effect = card.effect;
+            if (!effect) return false;
+
+            const upgraded = !!card.upgraded;
+            const effectValue = upgraded && effect.amountUpgraded !== undefined ? effect.amountUpgraded : effect.amountBase;
+            const mult = getCurrentDamageMultiplier();
+
+            if (effect.sfx) {
+                playSFX(effect.sfx);
+            }
+
+            switch (effect.kind) {
+                case 'burst_bullets': {
+                    const count = effect.count || 1;
+                    const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
+                    for (let i = 0; i < count; i++) {
+                        setTimeout(() => {
+                            if (gameState !== 'battle') return;
+                            fireCardBullet(effect.angleOffset || 0, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                        }, i * (effect.stepMs || 150));
+                    }
+                    return true;
+                }
+                case 'spread_burst': {
+                    const count = effect.count || 1;
+                    const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
+                    for (let i = 0; i < count; i++) {
+                        const angleOffset = (Math.random() - 0.5) * (effect.spread || 0.3);
+                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                    }
+                    return true;
+                }
+                case 'gain_shield':
+                    player.shield += effectValue || 0;
+                    spawnShieldVFX();
+                    return true;
+                case 'gain_shield_draw':
+                    player.shield += effectValue || 0;
+                    spawnShieldVFX();
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    return true;
+                case 'dash_shield_draw': {
+                    const velX = Math.sin(playerMesh.userData.facingAngle);
+                    const velZ = Math.cos(playerMesh.userData.facingAngle);
+                    playerMesh.position.x += velX * (effect.dashDistance || 8);
+                    playerMesh.position.z += velZ * (effect.dashDistance || 8);
+                    battleState.invulnTimer = effect.invulnFrames || 30;
+                    player.shield += effectValue || 0;
+                    spawnShieldVFX();
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    return true;
+                }
+                case 'dash_invuln_draw': {
+                    const velX = Math.sin(playerMesh.userData.facingAngle);
+                    const velZ = Math.cos(playerMesh.userData.facingAngle);
+                    playerMesh.position.x += velX * (effect.dashDistance || 8);
+                    playerMesh.position.z += velZ * (effect.dashDistance || 8);
+                    battleState.invulnTimer = effect.invulnFrames || 30;
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    return true;
+                }
+                case 'draw_only':
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    return true;
+                case 'poison_shell':
+                    firePoisonShell(upgraded);
+                    return true;
+                case 'damage_multiplier':
+                    player.damageMult += effectValue || 0;
+                    showToast(effect.toast || "All card damage increased!");
+                    spawnBuffVFX();
+                    return true;
+                case 'temp_damage_buff':
+                    addTempDamageBuff(effectValue || 0, effect.durationFrames || 180, card.id);
+                    showToast(effect.toast || "Temporary damage increased!");
+                    return true;
+                case 'strength_buff':
+                    player.damageMult += effectValue || 0;
+                    showToast(effect.toast || "Damage increased!");
+                    spawnBuffVFX();
+                    return true;
+                case 'energy_draw':
+                    player.energy = Math.min(player.maxEnergy, player.energy + (effect.energyAmount || effectValue || 0));
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    updateBattleStatsUI();
+                    return true;
+                case 'energy_with_purge':
+                    player.energy = Math.min(player.maxEnergy, player.energy + (effect.energyAmount || effectValue || 0));
+                    addTempDamageBuff(-(effect.purgePenalty || 1), effect.durationFrames || 120, 'turbo');
+                    updateBattleStatsUI();
+                    return true;
+                case 'spread_beam_draw': {
+                    const count = effect.count || 6;
+                    const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
+                    for (let i = 0; i < count; i++) {
+                        const angleOffset = (Math.random() - 0.5) * (effect.spread || 0.35);
+                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                    }
+                    for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
+                    return true;
+                }
+                case 'aoe_front':
+                case 'aoe_radial':
+                case 'aoe_burst_burn':
+                case 'aoe_low_cost':
+                case 'aoe_drain': {
+                    const damage = effect.damageBase !== undefined ? effect.damageBase : effectValue || 0;
+                    const radius = effect.radius || 5;
+                    const origin = playerMesh.position.clone();
+                    let hitCount = 0;
+                    battleState.enemies.forEach(enemy => {
+                        const dist = effect.kind === 'aoe_front'
+                            ? new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).length()
+                            : enemy.position.distanceTo(origin);
+                        if (dist <= radius) {
+                            const isFront = effect.kind !== 'aoe_front' || (() => {
+                                const forward = new THREE.Vector3(Math.sin(cameraTargetYaw), 0, Math.cos(cameraTargetYaw));
+                                const toEnemy = new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).normalize();
+                                return forward.dot(toEnemy) > 0.25;
+                            })();
+                            if (isFront) {
+                                enemy.userData.hp -= damage * mult;
+                                spawnHitSpark(enemy.position, effect.colorHex || 0xec4899);
+                                hitCount++;
+                            }
+                        }
+                    });
+                    if (effect.kind === 'aoe_drain' && hitCount > 0) {
+                        player.hp = Math.min(player.maxHp, player.hp + hitCount * (effect.healPerHit || 2));
+                    }
+                    if (effect.kind === 'aoe_burst_burn') {
+                        showToast("Burning blast!");
+                    }
+                    if (effect.kind === 'aoe_low_cost') {
+                        showToast("Wave released!");
+                    }
+                    if (effect.kind === 'aoe_radial') {
+                        showToast("Whirlwind!");
+                    }
+                    return true;
+                }
+                case 'shield_thorns':
+                    battleState.pendingRetaliation = {
+                        damage: effect.thornsDamage || effectValue || 2,
+                        life: effect.durationFrames || 240
+                    };
+                    spawnShieldVFX();
+                    return true;
+                case 'draw_lock':
+                    for (let i = 0; i < (effect.drawCount || 3); i++) drawCard();
+                    battleState.drawLockFrames = effect.lockFrames || 180;
+                    return true;
+                case 'next_turn_energy':
+                    addEnergyBonus(effectValue || 0);
+                    showToast("Energy stored for next cycle.");
+                    return true;
+                case 'attack_grants_shield':
+                    battleState.onHitShieldGain = {
+                        amount: effectValue || 0,
+                        life: effect.durationFrames || 240
+                    };
+                    return true;
+                case 'conditional_temp_damage_buff':
+                    if (battleState.enemies.some(enemy => enemy.userData.intent && enemy.userData.intent.startsWith('attack'))) {
+                        addTempDamageBuff(effectValue || 0, effect.durationFrames || 180, card.id);
+                    }
+                    return true;
+                case 'status_blank':
+                case 'status_exhaust':
+                case 'status_end_damage':
+                case 'status_playable_junk':
+                case 'status_energy_loss':
+                case 'curse_start_hand':
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -1584,6 +1934,33 @@
                 playerMesh.rotation.y = cameraTargetYaw; // Face the aim direction while moving in auto mode
             }
 
+            if (battleState.tempDamageBuffs.length > 0) {
+                for (let i = battleState.tempDamageBuffs.length - 1; i >= 0; i--) {
+                    battleState.tempDamageBuffs[i].life--;
+                    if (battleState.tempDamageBuffs[i].life <= 0) {
+                        battleState.tempDamageBuffs.splice(i, 1);
+                    }
+                }
+            }
+
+            if (battleState.drawLockFrames > 0) {
+                battleState.drawLockFrames--;
+            }
+
+            if (battleState.pendingRetaliation) {
+                battleState.pendingRetaliation.life--;
+                if (battleState.pendingRetaliation.life <= 0) {
+                    battleState.pendingRetaliation = null;
+                }
+            }
+
+            if (battleState.onHitShieldGain) {
+                battleState.onHitShieldGain.life--;
+                if (battleState.onHitShieldGain.life <= 0) {
+                    battleState.onHitShieldGain = null;
+                }
+            }
+
             // --- 2. Energy regeneration over time ---
             if (player.energy < player.maxEnergy) {
                 player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame);
@@ -1612,9 +1989,19 @@
                 battleState.invulnTimer--;
             }
 
+            if (battleState.pendingEnergyBonus > 0 && battleState.hand.length === 0) {
+                player.energy = Math.min(player.maxEnergy, player.energy + battleState.pendingEnergyBonus);
+                battleState.pendingEnergyBonus = 0;
+                updateBattleStatsUI();
+            }
+
             // --- 4. Projectile updates and collision checks ---
             for (let i = battleState.projectiles.length - 1; i >= 0; i--) {
                 const p = battleState.projectiles[i];
+                if (!p || !p.mesh) {
+                    battleState.projectiles.splice(i, 1);
+                    continue;
+                }
                 p.mesh.position.add(p.velocity);
                 p.life--;
 
@@ -1642,6 +2029,10 @@
                                 playSFX('hit');
                                 enemy.userData.hp -= p.damage;
                                 spawnHitSpark(p.mesh.position, 0x06b6d4);
+                                if (battleState.onHitShieldGain) {
+                                    player.shield += battleState.onHitShieldGain.amount || 0;
+                                    spawnShieldVFX();
+                                }
                                 
                                 if (p.type === 'player_normal') {
                                     player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryOnHit);
@@ -1658,7 +2049,7 @@
                         if (dist < 1.1) {
                             if (battleState.invulnTimer <= 0) {
                                 playSFX('hit');
-                                damagePlayer(p.damage);
+                                if (damagePlayer(p.damage)) return;
                                 spawnHitSpark(playerMesh.position, 0xef4444);
                             }
                             isRemoved = true;
@@ -1708,6 +2099,7 @@
                 if (enemy.userData.hp <= 0) {
                     playSFX('explosion');
                     console.log(`[DEBUG-KILL] Enemy defeated: ${enemy.userData.name}`);
+                    debugState('[DEBUG-KILL-STATE]', `enemy=${enemy.userData.name}`);
                     spawnExplosion(enemy.position, 0xec4899);
                     scene.remove(enemy);
                     
@@ -1721,6 +2113,7 @@
                     });
 
                     battleState.enemies.splice(eIdx, 1);
+                    if (gameState !== 'battle') return;
                     continue;
                 }
 
@@ -1746,16 +2139,19 @@
                     if (enemy.userData.intent === 'attack') {
                         fireEnemyBullet(enemy, 6);
                         enemy.userData.shootCooldown = 150 + Math.random() * 60;
+                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} chose attack (cooldown=${enemy.userData.shootCooldown.toFixed(0)})`);
                     } 
                     else if (enemy.userData.intent === 'attack_heavy') {
                         fireEnemyBullet(enemy, 15);
                         enemy.userData.shootCooldown = 100;
+                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} chose heavy attack (cooldown=${enemy.userData.shootCooldown.toFixed(0)})`);
                     }
                     else if (enemy.userData.intent === 'defense') {
                         playSFX('shield');
                         enemy.userData.hp = Math.min(enemy.userData.maxHp, enemy.userData.hp + 5);
                         spawnHitSpark(enemy.position, 0x3b82f6);
                         enemy.userData.shootCooldown = 180;
+                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} chose defense (hp=${enemy.userData.hp.toFixed(1)}/${enemy.userData.maxHp.toFixed(1)} cooldown=${enemy.userData.shootCooldown})`);
                     }
                 }
 
@@ -1783,8 +2179,10 @@
             if (battleState.enemies.length === 0) {
                 gameState = 'battle_end';
                 isFiring = false;
+                const battleEndToken = autoProgressToken;
 
                 console.log(`[DEBUG-WIN] 脂 Battle won! All enemies have been eliminated.`);
+                debugState('[DEBUG-WIN-STATE]', selectedNode ? `node=${selectedNode.type}` : 'node=none');
                 showToast("Battle won! Network barrier destroyed.");
                 
                 // Guard pointer lock release errors
@@ -1792,6 +2190,7 @@
 
                 // Transition to the 2D draft screen after a short delay
                 setTimeout(() => {
+                    if (battleEndToken !== autoProgressToken || gameState !== 'battle_end') return;
                     if (selectedNode && selectedNode.type === 'boss') {
                         console.log(`[DEBUG-WIN] All sector hacks complete!`);
                         showPanel('victory');
@@ -1803,6 +2202,7 @@
         }
 
         function damagePlayer(amount) {
+            const hadShield = player.shield > 0;
             if (player.shield > 0) {
                 player.shield -= amount;
                 if (player.shield < 0) {
@@ -1814,7 +2214,15 @@
             }
 
             console.log(`[DEBUG-DAMAGE] Player hit: ${amount} damage (Remaining HP: ${player.hp.toFixed(1)} / Shield: ${player.shield.toFixed(1)})`);
+            debugState('[DEBUG-DAMAGE-STATE]', `amount=${amount} hadShield=${hadShield}`);
             updateBattleStatsUI();
+
+            if (hadShield && battleState.pendingRetaliation) {
+                battleState.enemies.forEach(enemy => {
+                    enemy.userData.hp -= battleState.pendingRetaliation.damage || 0;
+                    spawnHitSpark(enemy.position, 0xf59e0b);
+                });
+            }
 
             if (player.hp <= 0) {
                 player.hp = 0;
@@ -1823,7 +2231,9 @@
                 window.__runState = 'gameover';
                 window.__runResult = 'gameover';
                 showPanel('gameover');
+                return true;
             }
+            return false;
         }
 
         function drawWarningLine(from, to) {

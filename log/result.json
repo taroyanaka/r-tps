@@ -1,0 +1,160 @@
+[
+  {
+    "paramName": "enemy_x6",
+    "result": "gameover"
+  },
+  {
+    "paramName": "enemy_x9",
+    "result": "gameover"
+  },
+  {
+    "paramName": "auto_test_quick",
+    "result": "victory"
+  },
+  {
+    "paramName": "enemy_x12",
+    "result": "gameover"
+  },
+  {
+    "paramName": "enemy_x3",
+    "result": "victory"
+  },
+  {
+    "paramName": "challenge_elite_only",
+    "result": "victory"
+  },
+  {
+    "paramName": "enemy_x6_ena_x2",
+    "result": "gameover"
+  },
+  {
+    "paramName": "enemy_x6_ena_x4",
+    "result": "victory"
+  },
+  {
+    "paramName": "enemy_x9_ena_x2",
+    "result": "gameover"
+  },
+  {
+    "paramName": "enemy_x3_ena_x4",
+    "result": "victory"
+  },
+  {
+    "paramName": "enemy_x3_ena_x2",
+    "result": "victory"
+  },
+  {
+    "paramName": "enemy_x9_ena_x4",
+    "result": "gameover"
+  },
+  {
+    "paramName": "easy_rich",
+    "result": "victory"
+  },
+  {
+    "paramName": "easy_beginner",
+    "result": "victory"
+  },
+  {
+    "paramName": "default",
+    "result": "victory"
+  },
+  {
+    "paramName": "easy_tank",
+    "result": "victory"
+  },
+  {
+    "paramName": "easy_fast_energy",
+    "result": "victory"
+  },
+  {
+    "paramName": "normal_balanced",
+    "result": "victory"
+  },
+  {
+    "paramName": "normal_high_energy",
+    "result": "victory"
+  },
+  {
+    "paramName": "normal_low_gold",
+    "result": "victory"
+  },
+  {
+    "paramName": "normal_tough_enemies",
+    "result": "victory"
+  },
+  {
+    "paramName": "hard_glass_cannon",
+    "result": "victory"
+  },
+  {
+    "paramName": "normal_aggressive",
+    "result": "victory"
+  },
+  {
+    "paramName": "hard_mode",
+    "result": "victory"
+  },
+  {
+    "paramName": "hard_broke",
+    "result": "victory"
+  },
+  {
+    "paramName": "hard_bullet_sponge",
+    "result": "victory"
+  },
+  {
+    "paramName": "extreme_iron_man",
+    "result": "victory"
+  },
+  {
+    "paramName": "extreme_swarm",
+    "result": "gameover"
+  },
+  {
+    "paramName": "extreme_nightmare",
+    "result": "victory"
+  },
+  {
+    "paramName": "speedrun_x50",
+    "result": "victory"
+  },
+  {
+    "paramName": "speedrun_x20",
+    "result": "victory"
+  },
+  {
+    "paramName": "rich_lazy",
+    "result": "victory"
+  },
+  {
+    "paramName": "debug_instant_kill",
+    "result": "victory"
+  },
+  {
+    "paramName": "energy_god",
+    "result": "victory"
+  },
+  {
+    "paramName": "survival_frugal",
+    "result": "victory"
+  },
+  {
+    "paramName": "challenge_no_shield",
+    "result": "victory"
+  },
+  {
+    "paramName": "challenge_regen",
+    "result": "victory"
+  },
+  {
+    "paramName": "hard_energy_drought",
+    "result": "error",
+    "error": "page.waitForTimeout: Target page, context or browser has been closed"
+  },
+  {
+    "paramName": "extreme_no_energy",
+    "result": "error",
+    "error": "page.waitForTimeout: Target page, context or browser has been closed"
+  }
+]
