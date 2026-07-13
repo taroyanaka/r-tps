@@ -629,7 +629,6 @@
                         window._renderParamTestButtons();
                     }
                 }, 50);
-                updateStartScreenLanguage();
             } 
             else if (panelType === 'map') {
                 const temp = document.getElementById('temp-map-screen').cloneNode(true);
