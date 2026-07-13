@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   CYBER SPIRE: TPS Deckbuilder
+  </title>
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <link href="style.css" rel="stylesheet"/>
+  <script>
+   const _htmlUrlParams = new URLSearchParams(window.location.search);
+        const _htmlParamName = _htmlUrlParams.get('param') || null;
+
+        const originalLog = console.log;
+        const originalError = console.error;
+        function postLog(body) {
+            try {
+                const key = '_rtps_browser_logs';
+                const logs = JSON.parse(localStorage.getItem(key) || '[]');
+                logs.push({ ...body, ts: Date.now() });
+                localStorage.setItem(key, JSON.stringify(logs.slice(-500)));
+            } catch (e) {}
+        }
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(a => typeof a === 'object' ? (a instanceof Error ? a.stack : JSON.stringify(a)) : String(a)).join(' ');
+            const body = { message: message };
+            if (_htmlParamName) body.param_name = _htmlParamName;
+            postLog(body);
+        };
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            console.log("[ERROR]", ...args);
+        };
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.log(`[JS_ERROR] ${msg} at ${url}:${lineNo}:${columnNo}`);
+            if (error && error.stack) console.log(error.stack);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            console.log(`[PROMISE_ERROR] ${event.reason}`);
+        });
+        // Clear the browser-local debug log when the game starts.
+        window.clearLog = function() {
+            try {
+                localStorage.removeItem('_rtps_browser_logs');
+            } catch (e) {}
+        };
+  </script>
+ </head>
+ <body class="cyber-grid w-screen h-screen relative">
+  <canvas class="absolute inset-0 w-full h-full z-0 pointer-events-auto" id="game-canvas">
+  </canvas>
+  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 hidden" id="reticle">
+   <div class="w-6 h-6 border border-cyan-400/80 rounded-full flex items-center justify-center">
+    <div class="w-1 h-1 bg-cyan-400 rounded-full">
+    </div>
+   </div>
+  </div>
+  <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6" id="ui-container">
+   <div class="flex justify-between items-start w-full pointer-events-auto">
+    <div class="bg-slate-950/80 backdrop-blur-md px-4 py-3 rounded-xl border border-blue-500/30 flex items-center gap-4 shadow-lg">
+     <div class="flex flex-col">
+      <span class="text-[10px] text-blue-400 font-bold tracking-wider uppercase">
+       PLAYER STATUS
+      </span>
+      <div class="flex items-center gap-2 mt-0.5">
+       <i class="fa-solid fa-heart-pulse text-rose-500 animate-pulse">
+       </i>
+       <div class="w-36 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 relative">
+        <div class="h-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-150" id="player-hp-bar" style="width: 100%;">
+        </div>
+        <span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white shadow-sm" id="player-hp-text">
+         80/80
+        </span>
+       </div>
+      </div>
+      <div class="flex items-center gap-1.5 mt-1.5 text-xs">
+       <i class="fa-solid fa-shield-halved text-cyan-400">
+       </i>
+       <span class="text-gray-400">
+        Block:
+       </span>
+       <span class="text-cyan-400 font-bold" id="player-block">
+        0
+       </span>
+      </div>
+     </div>
+     <div class="w-[1px] h-10 bg-slate-800">
+     </div>
+     <div class="flex flex-col gap-1 justify-center">
+      <div class="flex items-center gap-1.5 text-xs text-amber-400 font-mono">
+       <i class="fa-solid fa-coins">
+       </i>
+       <span id="player-gold">
+        99
+       </span>
+       G
+      </div>
+      <div class="flex items-center gap-1.5 text-xs text-blue-400">
+       <i class="fa-solid fa-box-archive">
+       </i>
+       <span class="text-gray-400">
+        Deck:
+       </span>
+       <span class="font-bold" id="player-deck-size">
+        10 cards
+       </span>
+      </div>
+     </div>
+    </div>
+    <div class="bg-slate-950/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-purple-500/30 text-right flex flex-col justify-center items-end shadow-lg">
+     <span class="text-[10px] text-purple-400 font-bold uppercase tracking-wider">
+      NETWORK NODE
+     </span>
+     <span class="text-sm font-bold text-white neon-text-magenta" id="current-node-name">
+      Sector 01 - Start
+     </span>
+     <span class="text-[10px] text-gray-400 font-mono mt-0.5" id="current-stage-text">
+      Stage 1 / 8
+     </span>
+     <span class="text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono mt-1.5 inline-block" id="mode-indicator">
+      MANUAL MODE (P)
+     </span>
+    </div>
+   </div>
+   <div class="w-full flex-1 flex items-center justify-center my-2 overflow-hidden" id="main-panel">
+   </div>
+   <div class="w-full flex flex-col items-center pointer-events-none transition-transform duration-500 translate-y-32" id="battle-tray">
+    <div class="flex justify-between items-end w-full max-w-4xl px-4 mb-2 pointer-events-auto">
+     <div class="bg-slate-950/90 border border-blue-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 text-blue-400 shadow-lg">
+      <i class="fa-solid fa-arrow-turn-up rotate-90 text-sm">
+      </i>
+      <span>
+         Draw:
+       <strong class="font-mono text-sm text-white" id="draw-pile-count">
+        0
+       </strong>
+      </span>
+     </div>
+     <div class="flex flex-col items-center">
+      <div class="flex gap-1 mb-1">
+       <div class="flex gap-1.5" id="energy-nodes">
+       </div>
+      </div>
+      <div class="bg-slate-950/90 border border-cyan-500/30 px-5 py-1.5 rounded-full flex items-center gap-2 text-cyan-400 shadow-xl">
+       <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-sm">
+       </i>
+       <span class="text-xs tracking-wider uppercase font-bold text-gray-300">
+        ENERGY
+       </span>
+       <span class="font-mono text-base font-bold text-white" id="energy-text">
+        3.0 / 3
+       </span>
+      </div>
+     </div>
+     <div class="bg-slate-950/90 border border-rose-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 text-rose-400 shadow-lg">
+      <span>
+       Discard:
+       <strong class="font-mono text-sm text-white" id="discard-pile-count">
+        0
+       </strong>
+      </span>
+      <i class="fa-solid fa-trash-can text-sm">
+      </i>
+     </div>
+    </div>
+    <div class="flex justify-center items-center gap-3 w-full max-w-3xl pointer-events-auto h-36" id="hand-cards">
+    </div>
+    <div class="text-[10px] text-gray-500 mt-2 tracking-widest uppercase flex items-center gap-2">
+     <span>
+      [1] [2] [3] [4] keys to use cards
+     </span>
+     <span class="text-slate-700">
+      |
+     </span>
+     <span>
+        [P] key to toggle manual/auto mode
+     </span>
+    </div>
+   </div>
+  </div>
+  <div class="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300" id="curtain">
+   <div class="flex flex-col items-center">
+    <div class="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mb-4">
+    </div>
+    <p class="text-sm font-mono tracking-widest text-cyan-400 animate-pulse" id="curtain-text">
+     Connecting sector...
+    </p>
+   </div>
+  </div>
+  <div class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" id="help-modal">
+   <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+    <div class="flex justify-between items-center mb-4">
+     <h2 class="text-lg font-bold text-white tracking-widest">
+      <i class="fa-solid fa-circle-question mr-2 text-cyan-400">
+      </i>
+        Help / Manual
+      <button class="text-gray-400 hover:text-white transition-colors" onclick="document.getElementById('help-modal').classList.add('hidden')">
+       <i class="fa-solid fa-xmark text-xl">
+       </i>
+      </button>
+     </h2>
+    </div>
+    <div class="text-left bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-gray-300 space-y-2 overflow-y-auto max-h-[60vh] hide-scrollbar">
+     <p class="font-bold text-white">
+      <i class="fa-solid fa-gamepad mr-2 text-cyan-400">
+      </i>
+      Basic Controls
+     </p>
+     <p>
+      •
+      <span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">
+       [P]
+      </span>
+      : Toggle manual/auto mode
+     </p>
+     <p>
+        •
+        <span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">
+         [SPACE]
+        </span>
+        : End turn
+     </p>
+     <p>
+    •
+      <span class="text-white font-mono bg-slate-800 px-1 py-0.5 rounded text-[10px]">
+       1, 2, 3, 4
+      </span>
+      : Use cards
+     </p>
+     <hr class="border-slate-800 my-2"/>
+     <p class="text-gray-400 text-[11px] leading-relaxed">
+     </p>
+    </div>
+    <button class="mt-4 w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all uppercase tracking-widest text-xs" onclick="document.getElementById('help-modal').classList.add('hidden')">
+     Close
+    </button>
+   </div>
+  </div>
+  <div class="hidden" id="templates">
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-start p-2 pt-6" id="temp-start-screen">
+    <div class="max-w-md w-full glass-panel bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-pink-500/30 text-center flex flex-col items-center pointer-events-auto shadow-2xl">
+     <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mb-3 md:mb-4 shadow-lg shadow-pink-500/20 flex-shrink-0">
+      <i class="fa-solid fa-triangle-exclamation text-xl md:text-3xl text-white">
+      </i>
+     </div>
+     <h1 class="text-xl md:text-2xl font-black tracking-widest text-white mb-0.5 uppercase">
+      <span id="start-title">CYBER SPIRE</span>
+     </h1>
+     <p class="text-[10px] md:text-xs text-pink-400 font-mono tracking-widest uppercase mb-4">
+      <span id="start-subtitle">TPS Slay the Spire</span>
+     </p>
+     <div class="w-full flex flex-col gap-3">
+      <button class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0" id="start-game-btn" onclick="startGame()">
+       Connect to the Network
+      </button>
+      <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" id="help-btn" onclick="document.getElementById('help-modal').classList.remove('hidden')">
+       Help / Manual
+      </button>
+      <div class="w-full border-t border-slate-800 pt-3 mt-1">
+       <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-mono">
+        embedded regulation data
+       </p>
+       <button class="w-full mb-2 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-2 px-3 rounded-lg transition-all uppercase tracking-wider" onclick="window._openAllAutoTabs && window._openAllAutoTabs()">
+        Open All AUTO Tabs
+       </button>
+       <div class="flex flex-col gap-2" id="param-test-list">
+        <p class="text-slate-600 text-xs italic">
+         Loading...
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <script>
+    // Render the param test buttons in the start screen.
+            window._renderParamTestButtons = function() {
+                const container = document.getElementById('param-test-list');
+                if (!container) return;
+
+                const render = (configs) => {
+                    container.innerHTML = '';
+                    window._openAllAutoTabs = () => {
+                        const baseUrl = window.location.pathname;
+                        configs.forEach(cfg => {
+                            const name = cfg.paramName || 'unknown';
+                            window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=auto`, '_blank');
+                        });
+                    };
+                    configs.forEach(cfg => {
+                        const name = cfg.paramName || 'unknown';
+                        const baseUrl = window.location.pathname;
+                        const row = document.createElement('div');
+                        row.className = 'flex gap-2 w-full items-center';
+
+                        const label = document.createElement('span');
+                        label.className = 'text-[10px] font-mono text-slate-400 w-24 text-left truncate flex-shrink-0';
+                        label.textContent = name;
+
+                        const manualBtn = document.createElement('button');
+                        manualBtn.className = 'flex-1 bg-blue-900/50 hover:bg-blue-800/70 border border-blue-500/30 text-blue-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
+                        manualBtn.textContent = 'Manual';
+                        manualBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=manual`, '_blank');
+
+                        const autoBtn = document.createElement('button');
+                        autoBtn.className = 'flex-1 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-1.5 px-2 rounded-lg transition-all uppercase tracking-wider';
+                        autoBtn.textContent = 'Auto';
+                        autoBtn.onclick = () => window.open(`${baseUrl}?param=${encodeURIComponent(name)}&mode=auto`, '_blank');
+
+                        row.appendChild(label);
+                        row.appendChild(manualBtn);
+                        row.appendChild(autoBtn);
+                        container.appendChild(row);
+                    });
+                };
+
+                const configs = window.RTPS_PARAM_LIST || [];
+                render(configs);
+            };
+   </script>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-map-screen">
+    <div class="max-w-2xl w-full bg-slate-950/90 backdrop-blur-md p-5 md:p-6 rounded-3xl border border-blue-500/20 flex flex-col items-center pointer-events-auto shadow-2xl max-h-[85vh] my-auto">
+     <div class="flex justify-between items-center w-full border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+      <div>
+       <h2 class="text-sm md:text-md font-bold text-white tracking-wider flex items-center gap-2">
+        <i class="fa-solid fa-network-wired text-blue-400">
+        </i>
+        MAP
+       </h2>
+       <p class="text-[9px] md:text-[10px] text-gray-400">
+        Select a node to view its details
+       </p>
+      </div>
+      <span class="text-[9px] md:text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+       MAP LAYER
+      </span>
+     </div>
+     <div class="w-full flex-1 overflow-y-auto pr-1 flex flex-col justify-start items-center gap-3.5 py-2 hide-scrollbar" id="map-nodes-container">
+     </div>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-reward-screen">
+    <div class="max-w-3xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-8 rounded-3xl border border-green-500/30 flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+     <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-2.5 border border-green-500/20 flex-shrink-0">
+      <i class="fa-solid fa-microchip text-xl text-green-400">
+      </i>
+     </div>
+     <h2 class="text-lg font-bold text-white tracking-widest mb-0.5 neon-text-green">
+        abcdefg
+      <p class="text-[10px] text-gray-400 mb-4">
+        abcdefg
+      </p>
+      <div class="bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs px-4 py-1.5 rounded-xl mb-4 flex items-center gap-2 flex-shrink-0">
+       <i class="fa-solid fa-coins animate-bounce">
+       </i>
+       <span>
+        abcdefg
+        <strong id="reward-gold-amount">
+         25
+        </strong>
+        abcdefg
+       </span>
+      </div>
+      <div class="flex flex-col md:flex-row justify-center gap-3 w-full mb-5 max-h-[40vh] md:max-h-none overflow-y-auto md:overflow-visible p-1" id="reward-card-options">
+      </div>
+      <button class="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest font-bold flex-shrink-0 py-1" onclick="skipReward()">
+       abcdefg
+      </button>
+     </h2>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-camp-screen">
+    <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-yellow-500/30 flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+     <div class="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-3 flex-shrink-0">
+      <i class="fa-solid fa-fire-flame-curved text-xl text-yellow-400">
+      </i>
+     </div>
+     <h2 class="text-md md:text-lg font-bold text-white tracking-wider mb-0.5">
+      Safe House Terminal
+     </h2>
+     <p class="text-[10px] text-gray-400 text-center mb-5">
+        Rest and upgrade your deck before continuing to the next sector.
+     </p>
+     <div class="w-full flex flex-col gap-2.5">
+      <button class="w-full bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 p-3.5 rounded-xl text-left flex items-center justify-between transition-all group hover:neon-border-green" onclick="campHeal()">
+       <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+         <i class="fa-solid fa-circle-plus text-md">
+         </i>
+        </div>
+        <div>
+         <p class="text-xs md:text-sm font-bold text-white group-hover:text-emerald-400">
+         </p>
+         <p class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
+          Restore 30% of lost HP.
+         </p>
+        </div>
+       </div>
+       <span class="text-xs text-emerald-400 font-bold">
+        +24 HP
+       </span>
+      </button>
+      <button class="w-full bg-slate-900 hover:bg-slate-850 border border-yellow-500/30 p-3.5 rounded-xl text-left flex items-center justify-between transition-all group hover:neon-border-magenta" id="camp-upgrade-btn" onclick="openCampUpgradeSelection()">
+       <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-yellow-500/10 rounded-lg flex items-center justify-center text-yellow-400 group-hover:scale-105 transition-transform">
+         <i class="fa-solid fa-bolt text-md">
+         </i>
+        </div>
+        <div>
+         <p class="text-xs md:text-sm font-bold text-white group-hover:text-yellow-400">
+         </p>
+         <p class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
+         </p>
+        </div>
+       </div>
+       <span class="text-xs text-yellow-400 font-bold">
+        UPGRADE
+       </span>
+      </button>
+     </div>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-upgrade-select">
+    <div class="max-w-2xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-yellow-500/30 flex flex-col pointer-events-auto shadow-2xl my-auto max-h-[85vh]">
+     <h3 class="text-xs md:text-sm font-bold text-white tracking-widest mb-3 uppercase flex items-center gap-2 flex-shrink-0">
+      <i class="fa-solid fa-microchip text-yellow-400">
+      </i>
+      Select a module to upgrade
+     </h3>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1 mb-4 hide-scrollbar" id="upgrade-deck-list">
+     </div>
+     <div class="flex justify-end gap-3 flex-shrink-0">
+      <button class="text-[10px] md:text-xs text-gray-400 hover:text-white px-4 py-2 font-bold uppercase tracking-widest" onclick="backToCamp()">
+       Cancel
+      </button>
+     </div>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-shop-screen">
+    <div class="max-w-2xl w-full bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-amber-500/30 flex flex-col pointer-events-auto shadow-2xl my-auto max-h-[85vh]">
+     <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+      <div>
+       <h2 class="text-sm md:text-md font-bold text-white tracking-wider flex items-center gap-2">
+        <i class="fa-solid fa-cart-shopping text-amber-400">
+        </i>
+       </h2>
+       <p class="text-[9px] md:text-[10px] text-gray-400">
+        Select items to purchase
+       </p>
+      </div>
+      <button class="text-[10px] md:text-xs bg-slate-900 hover:bg-slate-850 text-gray-300 border border-slate-700 px-3 py-1 rounded-xl" onclick="leaveShop()">
+      </button>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2 overflow-y-auto max-h-[55vh] pr-1 hide-scrollbar" id="shop-items-container">
+     </div>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-gameover-screen">
+    <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-red-500/40 text-center flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+     <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-3 text-red-500 animate-pulse flex-shrink-0">
+      <i class="fa-solid fa-skull-crossbones text-xl md:text-3xl">
+      </i>
+     </div>
+     <h2 class="text-lg md:text-2xl font-black tracking-widest text-red-500 mb-0.5 uppercase">
+        Game Over
+     </h2>
+     <p class="text-[10px] md:text-xs text-gray-400 mb-5">
+      You have been defeated.
+     </p>
+     <div class="bg-slate-900/40 p-4 rounded-xl border border-slate-800 text-left w-full mb-5 flex-shrink-0">
+      <p class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">
+       Battle log
+      </p>
+      <p class="text-xs md:text-sm font-bold text-white mt-1">
+       Reached sector:
+       <span class="text-red-400" id="gameover-stage">
+       </span>
+      </p>
+     </div>
+     <button class="w-full bg-red-950 hover:bg-red-900 text-red-200 font-bold py-2.5 md:py-3 px-6 rounded-xl border border-red-700/50 transition-all uppercase tracking-widest text-xs md:text-sm flex-shrink-0" onclick="resetGame()">
+      Try Again
+     </button>
+    </div>
+   </div>
+   <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-victory-screen">
+    <div class="max-w-md w-full bg-slate-950/95 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-green-500/40 text-center flex flex-col items-center pointer-events-auto shadow-2xl my-auto">
+     <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center justify-center mb-3 text-green-400 animate-bounce flex-shrink-0">
+      <i class="fa-solid fa-trophy text-xl md:text-3xl">
+      </i>
+     </div>
+     <h2 class="text-lg md:text-2xl font-black tracking-widest text-green-400 mb-0.5 uppercase">
+        Victory!
+     </h2>
+     <p class="text-[10px] md:text-xs text-gray-400 mb-5">
+        You have successfully completed the network hack.
+      <button class="w-full bg-green-950 hover:bg-green-900 text-green-200 font-bold py-2.5 md:py-3 px-6 rounded-xl border border-green-700/50 transition-all uppercase tracking-widest text-xs md:text-sm flex-shrink-0" onclick="resetGame()">
+       Go to the next network hack
+      </button>
+     </p>
+    </div>
+   </div>
+  </div>
+  <script src="audio.js">
+  </script>
+  <script src="data.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+  </script>
+  <script src="game.js">
+  </script>
+ </body>
+</html>
+

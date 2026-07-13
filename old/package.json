@@ -1,0 +1,11 @@
+{
+  "name": "r-tps",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "playwright:run": "node ./pw_runner.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.54.0"
+  }
+}
