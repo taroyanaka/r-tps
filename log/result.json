@@ -29,7 +29,7 @@
   },
   {
     "paramName": "enemy_x6_ena_x4",
-    "result": "gameover"
+    "result": "victory"
   },
   {
     "paramName": "enemy_x9_ena_x2",

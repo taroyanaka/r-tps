@@ -9,8 +9,8 @@
             paramName: 'default',
             playerHp: 80,
             playerMaxHp: 80,
-            playerEnergy: 3.0,
-            playerMaxEnergy: 3,
+            playerEnergy: 10.0,
+            playerMaxEnergy: 10,
             playerGold: 99,
             energyRecoveryPerFrame: 0.003,
             energyRecoveryOnHit: 0.15,
@@ -180,6 +180,21 @@
                 if (!CARD_DATA) throw new Error('RTPS_CARD_DATA is missing');
                 ENEMY_DEFS = window.RTPS_ENEMY_DEFS || {};
                 if (!ENEMY_DEFS.glitch) throw new Error('RTPS_ENEMY_DEFS is missing');
+                if (!ENEMY_DEFS.scout) {
+                    ENEMY_DEFS.scout = {
+                        id: 'scout',
+                        name: 'Scout Drone',
+                        type: 'scout',
+                        geometry: { kind: 'octahedron', size: 0.55 },
+                        color: 0x7dd3fc,
+                        baseHp: 8,
+                        speed: 0.09,
+                        radius: 0.75,
+                        specialCardId: null,
+                        specialChance: 0,
+                        specialLabel: null
+                    };
+                }
 
                 CARDS = CARD_DATA.cards || {};
                 UPGRADES = {};
@@ -188,6 +203,23 @@
                         UPGRADES[cardId] = card.upgrade;
                     }
                 }
+                if (!CARDS.overclock) {
+                    CARDS.overclock = {
+                        id: 'overclock',
+                        name: 'Overclock',
+                        cost: 1,
+                        type: 'skill',
+                        text: 'Increase energy recovery for a short time.',
+                        colorClass: 'border-indigo-500 text-indigo-400 bg-indigo-950/20',
+                        rarity: 'uncommon',
+                        poolType: ['reward', 'shop'],
+                        effect: { kind: 'energy_recovery_boost', recoveryBonus: 0.01, durationFrames: 180, toast: 'Energy recovery boosted!' },
+                        upgrade: { name: 'Overclock+', cost: 0, text: 'Increase energy recovery more for a short time.' }
+                    };
+                    UPGRADES.overclock = CARDS.overclock.upgrade;
+                }
+                if (!REWARD_POOL.includes('overclock')) REWARD_POOL.push('overclock');
+                if (!SHOP_POOL.includes('overclock')) SHOP_POOL.push('overclock');
                 INITIAL_DECK = Array.isArray(CARD_DATA.initialDeck) ? CARD_DATA.initialDeck : [];
                 REWARD_POOL = Array.isArray(CARD_DATA.rewardPool) && CARD_DATA.rewardPool.length > 0
                     ? CARD_DATA.rewardPool
@@ -195,6 +227,7 @@
                 SHOP_POOL = Array.isArray(CARD_DATA.shopPool) && CARD_DATA.shopPool.length > 0
                     ? CARD_DATA.shopPool
                     : getPoolForType('shop');
+                if (window.applyJapanesePatch) window.applyJapanesePatch(currentLanguage);
                 console.log('[CARD] Card data loaded');
             } catch (e) {
                 console.log(`[CARD] Card data load error: ${e}`);
@@ -203,8 +236,9 @@
                     shotgun: { id: 'shotgun', name: 'Shotgun Burst', cost: 2, type: 'attack', text: 'Fire 8 spread shots at close range. Devastating damage up close.', colorClass: 'border-pink-500 text-pink-400 bg-pink-950/20' },
                     defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
                     dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
-                    poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
+                    poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a straight poison round. On enemy impact, release a corrosive green gas dome.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
                     limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' },
+                    overclock: { id: 'overclock', name: 'Overclock', cost: 1, type: 'skill', text: 'Increase energy recovery for a short time.', colorClass: 'border-indigo-500 text-indigo-400 bg-indigo-950/20', rarity: 'uncommon', poolType: ['reward', 'shop'], effect: { kind: 'energy_recovery_boost', recoveryBonus: 0.01, durationFrames: 180, toast: 'Energy recovery boosted!' }, upgrade: { name: 'Overclock+', cost: 0, text: 'Increase energy recovery more for a short time.' } },
                     corruption: { id: 'corruption', name: 'Corruption', cost: 1, type: 'curse', text: 'A contaminated card that can be purified for a small amount of energy.', colorClass: 'border-violet-500 text-violet-400 bg-violet-950/20', rarity: 'common', poolType: [], effect: { kind: 'status_corruption_cleanse' } }
                 };
                 UPGRADES = {
@@ -212,7 +246,7 @@
                     shotgun: { name: 'Shotgun Burst+', cost: 1, text: 'Low cost. Fire 8 spread shots at close range.' },
                     defend: { name: 'Defense Shield+', text: 'Gain +16 block.' },
                     dodge: { name: 'Dodge Pulse+', cost: 0, text: 'No cost. Dash, invulnerable. Draw 1 card.' },
-                    poison: { name: 'Acid Gas+', text: 'A stronger poison gas attack. Severely corrodes the impact area.' },
+                    poison: { name: 'Acid Gas+', text: 'A stronger straight poison attack. Severely corrodes the impact area.' },
                     limit: { name: 'Limit Break+', cost: 2, text: 'Low cost. Increase all card damage by +100%.' }
                 };
                 INITIAL_DECK = [
@@ -255,8 +289,8 @@
             hp: 80,
             maxHp: 80,
             shield: 0,
-            energy: 3.0,
-            maxEnergy: 3,
+            energy: 10.0,
+            maxEnergy: 10,
             gold: 99,
             deck: [], 
             damageMult: 1.0 
@@ -274,6 +308,7 @@
             tempDamageBuffs: [],
             drawLockFrames: 0,
             pendingEnergyBonus: 0,
+            energyRegenBuffs: [],
             pendingRetaliation: null,
             onHitShieldGain: null,
             shieldTimer: 0,
@@ -358,9 +393,7 @@
 
             window.addEventListener('mousemove', (e) => {
                 if (gameState === 'battle' && !isAutoMode) {
-                    if (isMouseDown) {
-                        cameraTargetYaw -= e.movementX * 0.003;
-                    }
+                    cameraTargetYaw -= e.movementX * 0.003;
                 }
             });
 
@@ -1076,9 +1109,10 @@
                 const x = Math.cos(angle) * dist;
                 const z = Math.sin(angle) * dist;
 
-                const enemyType = Math.random() > 0.5 ? 'glitch' : 'sentinel';
-                createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
-            }
+            const enemyRoll = Math.random();
+            const enemyType = enemyRoll < 0.18 ? 'scout' : (enemyRoll < 0.59 ? 'glitch' : 'sentinel');
+            createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
+        }
         }
 
         function createEnemy3D(x, z, type, hpFactor = 1.0, speedFactor = 1.0) {
@@ -1516,6 +1550,13 @@
                     addTempDamageBuff(-(effect.purgePenalty || 1), effect.durationFrames || 120, 'turbo');
                     updateBattleStatsUI();
                     return true;
+                case 'energy_recovery_boost':
+                    battleState.energyRegenBuffs.push({
+                        amount: effect.recoveryBonus || effectValue || 0.01,
+                        life: effect.durationFrames || 180
+                    });
+                    showToast(effect.toast || 'Energy recovery increased temporarily.');
+                    return true;
                 case 'spread_beam_draw': {
                     const count = effect.count || 6;
                     const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
@@ -1712,7 +1753,7 @@
             const targetY = cameraTargetYaw;
             const velocity = new THREE.Vector3(
                 Math.sin(targetY) * 0.35,
-                0.08,
+                0,
                 Math.cos(targetY) * 0.35
             );
 
@@ -2017,6 +2058,15 @@
                 battleState.drawLockFrames--;
             }
 
+            if (battleState.energyRegenBuffs.length > 0) {
+                for (let i = battleState.energyRegenBuffs.length - 1; i >= 0; i--) {
+                    battleState.energyRegenBuffs[i].life--;
+                    if (battleState.energyRegenBuffs[i].life <= 0) {
+                        battleState.energyRegenBuffs.splice(i, 1);
+                    }
+                }
+            }
+
             if (battleState.pendingRetaliation) {
                 battleState.pendingRetaliation.life--;
                 if (battleState.pendingRetaliation.life <= 0) {
@@ -2033,7 +2083,8 @@
 
             // --- 2. Energy regeneration over time ---
             if (player.energy < player.maxEnergy) {
-                player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame);
+                const bonusRegen = battleState.energyRegenBuffs.reduce((sum, buff) => sum + (buff.amount || 0), 0);
+                player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame + bonusRegen);
                 updateBattleStatsUI();
             }
 
@@ -2079,10 +2130,6 @@
 
                 if (p.mesh.position.y < 0.2) {
                     p.mesh.position.y = 0.2;
-                    if (p.type === 'poison_shell') {
-                        createAcidDome(p.mesh.position, p.damage);
-                    }
-                    isRemoved = true;
                 }
 
                 if (Math.abs(p.mesh.position.x) > 49 || Math.abs(p.mesh.position.z) > 49) {
@@ -2097,8 +2144,13 @@
 
                             if (dist < (enemy.userData.radius + 0.4)) {
                                 playSFX('hit');
-                                enemy.userData.hp -= p.damage;
-                                spawnHitSpark(p.mesh.position, 0x06b6d4);
+                                if (p.type === 'poison_shell') {
+                                    createAcidDome(p.mesh.position, p.damage);
+                                    spawnHitSpark(p.mesh.position, 0x22c55e);
+                                } else {
+                                    enemy.userData.hp -= p.damage;
+                                    spawnHitSpark(p.mesh.position, 0x06b6d4);
+                                }
                                 if (battleState.onHitShieldGain) {
                                     player.shield += battleState.onHitShieldGain.amount || 0;
                                     spawnShieldVFX();
