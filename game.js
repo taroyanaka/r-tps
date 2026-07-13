@@ -39,10 +39,10 @@
                 languageLabel: 'Language'
             },
             ja: {
-                startTitle: 'サイバースパイア',
-                startSubtitle: 'Slay the Spireに触発されたTPSデッキ構築ゲーム',
-                startButton: 'ネットワークに接続',
-                helpButton: 'ヘルプ / マニュアル',
+                startTitle: 'CYBER SPIRE',
+                startSubtitle: 'Slay the Spire風 TPS デッキビルダー',
+                startButton: 'ネットワークへ接続',
+                helpButton: 'ヘルプ / 操作説明',
                 languageLabel: '言語'
             }
         };
@@ -55,6 +55,7 @@
             localStorage.setItem(LANG_STORAGE_KEY, lang);
             document.documentElement.lang = lang;
             updateStartScreenLanguage();
+            if (window.applyJapanesePatch) window.applyJapanesePatch(lang);
         }
 
         function updateStartScreenLanguage() {
@@ -79,6 +80,8 @@
                 btn.classList.toggle('bg-slate-800', !isActive);
                 btn.classList.toggle('text-slate-300', !isActive);
             });
+
+            if (window.applyJapanesePatch) window.applyJapanesePatch(currentLanguage);
         }
 
         async function loadParams() {
@@ -202,7 +205,7 @@
                     dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
                     poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
                     limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' },
-                    corruption: { id: 'corruption', name: 'Corruption', cost: 1, type: 'curse', text: 'A contaminated card that clogs your hand.', colorClass: 'border-violet-500 text-violet-400 bg-violet-950/20', rarity: 'common', poolType: [], effect: { kind: 'status_playable_junk' } }
+                    corruption: { id: 'corruption', name: 'Corruption', cost: 1, type: 'curse', text: 'A contaminated card that can be purified for a small amount of energy.', colorClass: 'border-violet-500 text-violet-400 bg-violet-950/20', rarity: 'common', poolType: [], effect: { kind: 'status_corruption_cleanse' } }
                 };
                 UPGRADES = {
                     strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
@@ -286,7 +289,7 @@
 
         // View controls
         let mouseX = 0, mouseY = 0;
-        let cameraTargetPitch = 0.2; 
+        let cameraTargetPitch = 0.8; 
         let cameraTargetYaw = 0;   
         let isMouseDown = false;   
         let isFiring = false; 
@@ -357,7 +360,6 @@
                 if (gameState === 'battle' && !isAutoMode) {
                     if (isMouseDown) {
                         cameraTargetYaw -= e.movementX * 0.003;
-                        cameraTargetPitch = Math.max(-0.4, Math.min(0.8, cameraTargetPitch - e.movementY * 0.003));
                     }
                 }
             });
@@ -445,10 +447,17 @@
             const card = cloneCardById(cardId);
             if (!card) return false;
 
-            const putInHand = preferHand && battleState.hand.length < 4;
+            const putInHand = battleState.hand.length < 4;
             if (putInHand) {
                 battleState.hand.push(card);
                 handleDrawnCard(card);
+            } else if (battleState.hand.length > 0) {
+                const discardIndex = Math.floor(Math.random() * battleState.hand.length);
+                const discarded = battleState.hand.splice(discardIndex, 1)[0];
+                battleState.discardPile.push(discarded);
+                battleState.hand.push(card);
+                handleDrawnCard(card);
+                showToast(`${discarded.name} was pushed into the discard pile.`);
             } else {
                 battleState.drawPile.push(card);
                 shuffleArray(battleState.drawPile);
@@ -1587,6 +1596,24 @@
                 case 'status_exhaust':
                 case 'status_end_damage':
                 case 'status_playable_junk':
+                case 'status_corruption_cleanse':
+                    if (card.id === 'corruption') {
+                        const handIndex = battleState.hand.indexOf(card);
+                        if (handIndex >= 0) {
+                            battleState.hand.splice(handIndex, 1);
+                        }
+                        const cleanseCost = Math.max(1, Math.ceil(player.maxEnergy * 0.34));
+                        const actualCost = Math.min(cleanseCost, player.energy);
+                        player.energy = Math.max(0, player.energy - actualCost);
+                        const deckIndex = player.deck.indexOf(card);
+                        if (deckIndex >= 0) {
+                            player.deck.splice(deckIndex, 1);
+                        }
+                        showToast(`Corruption purified. Energy -${actualCost}.`);
+                        updateBattleStatsUI();
+                        renderHandUI();
+                        return true;
+                    }
                 case 'status_energy_loss':
                 case 'curse_start_hand':
                     return true;
@@ -1604,7 +1631,7 @@
                 battleState.shieldMesh.material.dispose();
             }
 
-            const geom = new THREE.SphereGeometry(1.6, 16, 16);
+            const geom = new THREE.SphereGeometry(0.8, 16, 16);
             const edges = new THREE.EdgesGeometry(geom);
             const mat = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.4 });
             const shield = new THREE.LineSegments(edges, mat);
@@ -1955,6 +1982,12 @@
 
             // Camera follow
             const camDist = 7.5;
+            if (keys['arrowup']) {
+                cameraTargetPitch = Math.min(0.8, cameraTargetPitch + 0.02);
+            }
+            if (keys['arrowdown']) {
+                cameraTargetPitch = Math.max(-0.4, cameraTargetPitch - 0.02);
+            }
             const targetCamX = playerMesh.position.x - Math.sin(cameraTargetYaw) * camDist;
             const targetCamZ = playerMesh.position.z - Math.cos(cameraTargetYaw) * camDist;
             const targetCamY = playerMesh.position.y + 3.0 + cameraTargetPitch * camDist;
