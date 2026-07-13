@@ -17,19 +17,12 @@
         const originalLog = console.log;
         const originalError = console.error;
         function postLog(body) {
-            const payload = JSON.stringify(body);
-            if (navigator.sendBeacon) {
-                try {
-                    const blob = new Blob([payload], { type: 'application/json' });
-                    if (navigator.sendBeacon('http://localhost:8000/log', blob)) return;
-                } catch (e) {}
-            }
-            fetch('http://localhost:8000/log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: payload,
-                keepalive: true
-            }).catch(e => {});
+            try {
+                const key = '_rtps_browser_logs';
+                const logs = JSON.parse(localStorage.getItem(key) || '[]');
+                logs.push({ ...body, ts: Date.now() });
+                localStorage.setItem(key, JSON.stringify(logs.slice(-500)));
+            } catch (e) {}
         }
         console.log = function(...args) {
             originalLog.apply(console, args);
@@ -50,16 +43,11 @@
         window.addEventListener('unhandledrejection', function(event) {
             console.log(`[PROMISE_ERROR] ${event.reason}`);
         });
-        // Clear the log when the game starts.
+        // Clear the browser-local debug log when the game starts.
         window.clearLog = function() {
-            const body = {};
-            if (_htmlParamName) body.param_name = _htmlParamName;
-            fetch('http://localhost:8000/clear_log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                keepalive: true
-            }).catch(e => {});
+            try {
+                localStorage.removeItem('_rtps_browser_logs');
+            } catch (e) {}
         };
   </script>
  </head>
@@ -347,12 +335,8 @@
                     });
                 };
 
-                fetch('http://localhost:8000/params')
-                    .then(r => r.json())
-                    .then(render)
-                    .catch(() => {
-                        container.innerHTML = '<p class="text-slate-600 text-xs italic">ローカル一覧を読めませんでした。</p>';
-                    });
+                const configs = window.RTPS_PARAM_LIST || [];
+                render(configs);
             };
    </script>
    <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-map-screen">
@@ -538,6 +522,8 @@
    </div>
   </div>
   <script src="audio.js">
+  </script>
+  <script src="data.js">
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
   </script>

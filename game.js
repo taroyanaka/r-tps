@@ -121,15 +121,18 @@
             });
         }
 
-        // Load from /params when served.
         async function loadParams() {
             if (!_paramName) {
                 return;
             }
 
             try {
-                const res = await fetch('http://localhost:8000/params');
-                const configs = await res.json();
+                const configs = Array.isArray(window.RTPS_PARAM_LIST)
+                    ? window.RTPS_PARAM_LIST
+                    : await fetch('param.json').then(res => {
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        return res.json();
+                    });
                 const config = configs.find(c => c.paramName === _paramName);
                 if (config) {
                     for (const key in config) {
@@ -215,9 +218,10 @@
 
         async function loadCardData() {
             try {
-                const res = await fetch('cards.json');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                CARD_DATA = await res.json();
+                CARD_DATA = window.RTPS_CARD_DATA || await fetch('cards.json').then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                });
 
                 CARDS = CARD_DATA.cards || {};
                 UPGRADES = {};
@@ -233,7 +237,7 @@
                 SHOP_POOL = Array.isArray(CARD_DATA.shopPool) && CARD_DATA.shopPool.length > 0
                     ? CARD_DATA.shopPool
                     : getPoolForType('shop');
-                console.log('[CARD] Card data loaded from cards.json');
+                console.log('[CARD] Card data loaded');
             } catch (e) {
                 console.log(`[CARD] Card data load error: ${e}`);
                 CARDS = {
