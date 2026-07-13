@@ -1761,7 +1761,7 @@
             const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
             const mesh = new THREE.Mesh(geom, mat);
             mesh.position.copy(playerMesh.position);
-            mesh.position.y += 0.2;
+            mesh.position.y = 1.0;
             scene.add(mesh);
 
             battleState.projectiles.push({
@@ -2140,12 +2140,20 @@
                     if (p.type.startsWith('player')) {
                         for (let eIdx = battleState.enemies.length - 1; eIdx >= 0; eIdx--) {
                             const enemy = battleState.enemies[eIdx];
-                            const dist = p.mesh.position.distanceTo(enemy.position);
+                            const dist = p.type === 'poison_shell'
+                                ? new THREE.Vector3(
+                                    p.mesh.position.x - enemy.position.x,
+                                    0,
+                                    p.mesh.position.z - enemy.position.z
+                                ).length()
+                                : p.mesh.position.distanceTo(enemy.position);
 
-                            if (dist < (enemy.userData.radius + 0.4)) {
+                            if (dist < (enemy.userData.radius + (p.type === 'poison_shell' ? 1.0 : 0.4))) {
                                 playSFX('hit');
                                 if (p.type === 'poison_shell') {
-                                    createAcidDome(p.mesh.position, p.damage);
+                                    const domePos = enemy.position.clone();
+                                    domePos.y = 0;
+                                    createAcidDome(domePos, p.damage);
                                     spawnHitSpark(p.mesh.position, 0x22c55e);
                                 } else {
                                     enemy.userData.hp -= p.damage;
