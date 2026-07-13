@@ -1690,7 +1690,6 @@
                 case 'status_blank':
                 case 'status_exhaust':
                 case 'status_end_damage':
-                case 'status_playable_junk':
                 case 'status_corruption_cleanse':
                     if (card.id === 'corruption') {
                         const handIndex = battleState.hand.indexOf(card);
