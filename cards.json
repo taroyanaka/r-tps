@@ -483,6 +483,17 @@
       "rarity": "common",
       "poolType": [],
       "effect": { "kind": "curse_start_hand" }
+    },
+    "corruption": {
+      "id": "corruption",
+      "name": "Corruption",
+      "cost": 1,
+      "type": "curse",
+      "text": "A contaminated card that clogs your hand.",
+      "colorClass": "border-violet-500 text-violet-400 bg-violet-950/20",
+      "rarity": "common",
+      "poolType": [],
+      "effect": { "kind": "status_playable_junk" }
     }
   },
   "initialDeck": [

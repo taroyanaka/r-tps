@@ -26,6 +26,47 @@
         let INITIAL_DECK = [];
         let REWARD_POOL = [];
         let SHOP_POOL = [];
+        let ENEMY_DEFS = {
+            glitch: {
+                id: 'glitch',
+                name: 'Glitch Virus',
+                type: 'glitch',
+                geometry: { kind: 'octahedron', size: 0.8 },
+                color: 0xec4899,
+                baseHp: 25,
+                speed: 0.04,
+                radius: 1.0,
+                specialCardId: 'corruption',
+                specialChance: 0.35,
+                specialLabel: 'Inject Corruption'
+            },
+            sentinel: {
+                id: 'sentinel',
+                name: 'Sentinel Shield',
+                type: 'sentinel',
+                geometry: { kind: 'box', width: 1.2, height: 1.2, depth: 1.2 },
+                color: 0xf59e0b,
+                baseHp: 40,
+                speed: 0.02,
+                radius: 1.0,
+                specialCardId: null,
+                specialChance: 0,
+                specialLabel: null
+            },
+            boss: {
+                id: 'boss',
+                name: 'Mainframe Core (BOSS)',
+                type: 'boss',
+                geometry: { kind: 'icosahedron', radius: 2.5, detail: 1 },
+                color: 0xef4444,
+                baseHp: 150,
+                speed: 0.015,
+                radius: 2.5,
+                specialCardId: 'writhe',
+                specialChance: 0.4,
+                specialLabel: 'System Corruption'
+            }
+        };
         const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
 
         const LANG_STORAGE_KEY = 'cyber_spire_language';
@@ -201,7 +242,8 @@
                     defend: { id: 'defend', name: 'Defense Shield', cost: 1, type: 'defense', text: 'Gain +10 block. Deploy an electromagnetic dome around the player.', colorClass: 'border-blue-500 text-blue-400 bg-blue-950/20' },
                     dodge: { id: 'dodge', name: 'Dodge Pulse', cost: 1, type: 'skill', text: 'Dash quickly in the facing direction. Gain 0.5s of invulnerability. Draw 1 card.', colorClass: 'border-emerald-500 text-emerald-400 bg-emerald-950/20' },
                     poison: { id: 'poison', name: 'Acid Gas', cost: 2, type: 'skill', text: 'Fire a poison gas round. Create a green dome that corrodes enemies on impact.', colorClass: 'border-green-500 text-green-400 bg-green-950/20' },
-                    limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' }
+                    limit: { id: 'limit', name: 'Limit Break', cost: 3, type: 'power', text: 'Increase all card damage by +100% until the end of battle.', colorClass: 'border-amber-500 text-amber-400 bg-amber-950/20' },
+                    corruption: { id: 'corruption', name: 'Corruption', cost: 1, type: 'curse', text: 'A contaminated card that clogs your hand.', colorClass: 'border-violet-500 text-violet-400 bg-violet-950/20', rarity: 'common', poolType: [], effect: { kind: 'status_playable_junk' } }
                 };
                 UPGRADES = {
                     strike: { name: 'Strike+', text: 'Fire a cyan laser 3 times for 10 damage each.' },
@@ -433,6 +475,34 @@
         function addEnergyBonus(amount) {
             if (!amount) return;
             battleState.pendingEnergyBonus = (battleState.pendingEnergyBonus || 0) + amount;
+        }
+
+        function cloneCardById(cardId) {
+            if (!cardId || !CARDS[cardId]) return null;
+            return cloneCardDefinition(cardId, false);
+        }
+
+        function insertEnemyCardToPlayer(cardId, preferHand = true) {
+            const card = cloneCardById(cardId);
+            if (!card) return false;
+
+            const putInHand = preferHand && battleState.hand.length < 4;
+            if (putInHand) {
+                battleState.hand.push(card);
+                handleDrawnCard(card);
+            } else {
+                battleState.drawPile.push(card);
+                shuffleArray(battleState.drawPile);
+            }
+
+            updateBattleStatsUI();
+            renderHandUI();
+            console.log(`[DEBUG-ENEMY-SPECIAL] Added corruption card: ${card.name} (${putInHand ? 'hand' : 'draw pile'})`);
+            return true;
+        }
+
+        function getEnemyDef(enemyType) {
+            return ENEMY_DEFS[enemyType] || ENEMY_DEFS.glitch;
         }
 
         function handleDrawnCard(card) {
@@ -1045,27 +1115,18 @@
 
         function createEnemy3D(x, z, type, hpFactor = 1.0, speedFactor = 1.0) {
             const group = new THREE.Group();
+            const def = getEnemyDef(type);
+            const geometry = def.geometry.kind === 'octahedron'
+                ? new THREE.OctahedronGeometry(def.geometry.size)
+                : def.geometry.kind === 'icosahedron'
+                    ? new THREE.IcosahedronGeometry(def.geometry.radius, def.geometry.detail)
+                    : new THREE.BoxGeometry(def.geometry.width, def.geometry.height, def.geometry.depth);
+            const color = def.color;
+            const name = def.name;
+            let maxHp = def.baseHp * hpFactor * PARAMS.enemyHpMult;
+            let speed = def.speed * speedFactor;
 
-            let geometry, color, name;
-            let maxHp = 25 * hpFactor * PARAMS.enemyHpMult;
-            let speed = 0.04 * speedFactor;
-
-            if (type === 'glitch') {
-                geometry = new THREE.OctahedronGeometry(0.8);
-                color = 0xec4899; 
-                name = 'Glitch Virus';
-            } else { 
-                geometry = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-                color = 0xf59e0b; 
-                name = 'Sentinel Shield';
-                maxHp = 40 * hpFactor * PARAMS.enemyHpMult;
-                speed = 0.02 * speedFactor;
-            }
-
-            // Start at 1/10 HP in auto mode
-            if (isAutoMode) {
-                maxHp /= 10;
-            }
+            if (isAutoMode) maxHp /= 10;
 
             const wireframe = new THREE.LineSegments(
                 new THREE.EdgesGeometry(geometry),
@@ -1084,7 +1145,8 @@
 
             group.userData = {
                 id: Math.random().toString(36).substr(2, 9),
-                type: type,
+                type: def.type,
+                defId: def.id,
                 name: name,
                 hp: maxHp,
                 maxHp: maxHp,
@@ -1093,8 +1155,12 @@
                 shootCooldown: 120 + Math.random() * 60,
                 intent: 'attack',
                 intentTimer: 180,
+                specialCooldown: 240 + Math.random() * 120,
                 intentSprite: intentSprite,
-                radius: 1.0
+                radius: def.radius,
+                specialCardId: def.specialCardId,
+                specialChance: def.specialChance || 0,
+                specialLabel: def.specialLabel
             };
 
             battleState.enemies.push(group);
@@ -1103,9 +1169,10 @@
         }
 
         function spawnBoss() {
+            const def = getEnemyDef('boss');
             const group = new THREE.Group();
-            const geometry = new THREE.IcosahedronGeometry(2.5, 1);
-            const color = 0xef4444; 
+            const geometry = new THREE.IcosahedronGeometry(def.geometry.radius, def.geometry.detail);
+            const color = def.color; 
 
             const wireframe = new THREE.LineSegments(
                 new THREE.EdgesGeometry(geometry),
@@ -1118,33 +1185,38 @@
             group.position.set(0, 3, 18);
             scene.add(group);
 
-            let maxHp = 150;
+            let maxHp = def.baseHp;
             if (isAutoMode) {
                 maxHp /= 10;
             }
 
-            const intentSprite = createIntentSprite('Mainframe Core');
+            const intentSprite = createIntentSprite(def.name);
             intentSprite.position.y = 3.5;
             group.add(intentSprite);
 
             group.userData = {
                 id: 'boss-core',
-                type: 'boss',
-                name: 'Mainframe Core (BOSS)',
+                type: def.type,
+                defId: def.id,
+                name: def.name,
                 hp: maxHp,
                 maxHp: maxHp,
-                speed: 0.015,
+                speed: def.speed,
                 shield: 0,
                 shootCooldown: 80,
                 intent: 'attack_heavy',
                 intentTimer: 200,
                 intentSprite: intentSprite,
-                radius: 2.5
+                radius: def.radius,
+                specialCardId: def.specialCardId,
+                specialChance: def.specialChance || 0,
+                specialLabel: def.specialLabel,
+                specialCooldown: 180
             };
 
             battleState.enemies.push(group);
-            console.log(`[DEBUG-SPAWN] 捗 Boss spawned: Mainframe Core (HP: ${maxHp.toFixed(1)})`);
-            debugState('[DEBUG-BOSS-STATE]', `enemy=Mainframe Core`);
+            console.log(`[DEBUG-SPAWN] Boss spawned: ${def.name} (HP: ${maxHp.toFixed(1)})`);
+            debugState('[DEBUG-BOSS-STATE]', `enemy=${def.name}`);
         }
 
         function createIntentSprite(name) {
@@ -1197,14 +1269,20 @@
             let text = "";
             let color = "#ffffff";
             if (enemy.userData.intent === 'attack') {
-                text = "笞｡ Attack prediction (6 DMG)";
+                text = "Attack prediction (6 DMG)";
                 color = "#f43f5e";
             } else if (enemy.userData.intent === 'attack_heavy') {
-                text = "笘・Giga beam round (15 DMG)";
+                text = "Giga beam round (15 DMG)";
                 color = "#ef4444";
             } else if (enemy.userData.intent === 'defense') {
-                text = "孱 Barrier load (+10 BLOCK)";
+                text = "Barrier load (+10 BLOCK)";
                 color = "#3b82f6";
+            } else if (enemy.userData.intent === 'special') {
+                const cardName = enemy.userData.specialCardId && CARDS[enemy.userData.specialCardId]
+                    ? CARDS[enemy.userData.specialCardId].name
+                    : "Corruption";
+                text = `Special: ${cardName}`;
+                color = "#a855f7";
             }
 
             ctx.fillStyle = color;
@@ -2130,8 +2208,26 @@
 
                 enemy.userData.intentTimer--;
                 if (enemy.userData.intentTimer <= 0) {
-                    enemy.userData.intent = Math.random() > 0.4 ? 'attack' : 'defense';
+                    const hasSpecial = !!enemy.userData.specialCardId;
+                    if (hasSpecial && Math.random() < (enemy.userData.specialChance || 0)) {
+                        enemy.userData.intent = 'special';
+                    } else if (enemy.userData.type === 'boss') {
+                        enemy.userData.intent = Math.random() > 0.3 ? 'attack_heavy' : 'defense';
+                    } else {
+                        enemy.userData.intent = Math.random() > 0.4 ? 'attack' : 'defense';
+                    }
                     enemy.userData.intentTimer = 180 + Math.random() * 60;
+                }
+
+                enemy.userData.specialCooldown--;
+                if (enemy.userData.specialCooldown <= 0 && enemy.userData.intent === 'special') {
+                    if (insertEnemyCardToPlayer(enemy.userData.specialCardId, true)) {
+                        enemy.userData.specialCooldown = 240 + Math.random() * 120;
+                        enemy.userData.shootCooldown = 180;
+                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} used special attack (${enemy.userData.specialCardId})`);
+                    } else {
+                        enemy.userData.specialCooldown = 90;
+                    }
                 }
 
                 enemy.userData.shootCooldown--;
