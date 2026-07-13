@@ -12,7 +12,7 @@
             playerEnergy: 10.0,
             playerMaxEnergy: 10,
             playerGold: 99,
-            energyRecoveryPerFrame: 0.003,
+            energyRecoveryPerFrame: 0.006,
             energyRecoveryOnHit: 0.15,
             autoModeSpeedMult: 10,
             enemyCountMult: 1.0,
