@@ -58,8 +58,35 @@
             if (window.applyJapanesePatch) window.applyJapanesePatch(lang);
         }
 
+        function getLanguageText(lang) {
+            const fallback = LANGUAGE_TEXT[lang] || LANGUAGE_TEXT.ja;
+            const external = TEXT_DATA && TEXT_DATA[lang] && TEXT_DATA[lang].ui;
+            if (!external) return fallback;
+            return {
+                startTitle: external.startTitle ?? fallback.startTitle,
+                startSubtitle: external.startSubtitle ?? fallback.startSubtitle,
+                startButton: external.startButton ?? fallback.startButton,
+                helpButton: external.helpButton ?? fallback.helpButton,
+                languageLabel: external.languageLabel ?? fallback.languageLabel
+            };
+        }
+
+        async function loadTextData() {
+            try {
+                const response = await fetch('text.json', { cache: 'no-store' });
+                if (!response.ok) throw new Error(`Failed to load text.json (${response.status})`);
+                TEXT_DATA = await response.json();
+                window.RTPS_TEXT_DATA = TEXT_DATA;
+                console.log('[TEXT] Loaded text.json');
+            } catch (error) {
+                console.log(`[TEXT] text.json load failed: ${error}`);
+                TEXT_DATA = null;
+                window.RTPS_TEXT_DATA = null;
+            }
+        }
+
         function updateStartScreenLanguage() {
-            const text = LANGUAGE_TEXT[currentLanguage] || LANGUAGE_TEXT.ja;
+            const text = getLanguageText(currentLanguage);
             const title = document.getElementById('start-title');
             const subtitle = document.getElementById('start-subtitle');
             const startBtn = document.getElementById('start-game-btn');
@@ -357,6 +384,7 @@
 
         // --- Startup initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
+            await loadTextData();
             await loadParams();
             await loadCardData();
 
