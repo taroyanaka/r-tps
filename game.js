@@ -29,88 +29,6 @@
         let ENEMY_DEFS = null;
         const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
 
-        const LANG_STORAGE_KEY = 'cyber_spire_language';
-        const LANGUAGE_TEXT = {
-            en: {
-                startTitle: 'CYBER SPIRE',
-                startSubtitle: 'TPS Deckbuilder inspired by Slay the Spire',
-                startButton: 'Connect to the Network',
-                helpButton: 'Help / Manual',
-                languageLabel: 'Language'
-            },
-            ja: {
-                startTitle: 'CYBER SPIRE',
-                startSubtitle: 'Slay the Spire風 TPS デッキビルダー',
-                startButton: 'ネットワークへ接続',
-                helpButton: 'ヘルプ / 操作説明',
-                languageLabel: '言語'
-            }
-        };
-        let currentLanguage = localStorage.getItem(LANG_STORAGE_KEY) || 'ja';
-        if (!LANGUAGE_TEXT[currentLanguage]) currentLanguage = 'ja';
-
-        function setLanguage(lang) {
-            if (!LANGUAGE_TEXT[lang]) return;
-            currentLanguage = lang;
-            localStorage.setItem(LANG_STORAGE_KEY, lang);
-            document.documentElement.lang = lang;
-            updateStartScreenLanguage();
-            if (window.applyJapanesePatch) window.applyJapanesePatch(lang);
-        }
-
-        function getLanguageText(lang) {
-            const fallback = LANGUAGE_TEXT[lang] || LANGUAGE_TEXT.ja;
-            const external = TEXT_DATA && TEXT_DATA[lang] && TEXT_DATA[lang].ui;
-            if (!external) return fallback;
-            return {
-                startTitle: external.startTitle ?? fallback.startTitle,
-                startSubtitle: external.startSubtitle ?? fallback.startSubtitle,
-                startButton: external.startButton ?? fallback.startButton,
-                helpButton: external.helpButton ?? fallback.helpButton,
-                languageLabel: external.languageLabel ?? fallback.languageLabel
-            };
-        }
-
-        async function loadTextData() {
-            try {
-                const response = await fetch('text.json', { cache: 'no-store' });
-                if (!response.ok) throw new Error(`Failed to load text.json (${response.status})`);
-                TEXT_DATA = await response.json();
-                window.RTPS_TEXT_DATA = TEXT_DATA;
-                console.log('[TEXT] Loaded text.json');
-            } catch (error) {
-                console.log(`[TEXT] text.json load failed: ${error}`);
-                TEXT_DATA = null;
-                window.RTPS_TEXT_DATA = null;
-            }
-        }
-
-        function updateStartScreenLanguage() {
-            const text = getLanguageText(currentLanguage);
-            const title = document.getElementById('start-title');
-            const subtitle = document.getElementById('start-subtitle');
-            const startBtn = document.getElementById('start-game-btn');
-            const helpBtn = document.getElementById('help-btn');
-            const languageLabel = document.getElementById('language-label');
-
-            if (title) title.textContent = text.startTitle;
-            if (subtitle) subtitle.textContent = text.startSubtitle;
-            if (startBtn) startBtn.textContent = text.startButton;
-            if (helpBtn) helpBtn.textContent = text.helpButton;
-            if (languageLabel) languageLabel.textContent = text.languageLabel;
-
-            document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
-                const isActive = btn.dataset.lang === currentLanguage;
-                btn.classList.toggle('bg-pink-500', isActive);
-                btn.classList.toggle('border-pink-400', isActive);
-                btn.classList.toggle('text-white', isActive);
-                btn.classList.toggle('bg-slate-800', !isActive);
-                btn.classList.toggle('text-slate-300', !isActive);
-            });
-
-            if (window.applyJapanesePatch) window.applyJapanesePatch(currentLanguage);
-        }
-
         async function loadParams() {
             if (!_paramName) {
                 return;
@@ -294,8 +212,7 @@
                 SHOP_POOL = Array.isArray(CARD_DATA.shopPool) && CARD_DATA.shopPool.length > 0
                     ? CARD_DATA.shopPool
                     : getPoolForType('shop');
-                if (window.applyJapanesePatch) window.applyJapanesePatch(currentLanguage);
-                console.log('[CARD] Card data loaded');
+                    console.log('[CARD] Card data loaded');
             } catch (e) {
                 console.log(`[CARD] Card data load error: ${e}`);
                 CARDS = {
@@ -384,7 +301,6 @@
 
         // --- Startup initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
-            await loadTextData();
             await loadParams();
             await loadCardData();
 
@@ -402,7 +318,6 @@
 
             initThree();
             setupInitialDeck();
-            document.documentElement.lang = currentLanguage;
 
             if (_autoStart) {
                 startGame();
@@ -708,9 +623,6 @@
                 const temp = document.getElementById('temp-start-screen').cloneNode(true);
                 temp.removeAttribute('id');
                 panel.appendChild(temp);
-                temp.querySelectorAll('.lang-toggle-btn').forEach(btn => {
-                    btn.onclick = () => setLanguage(btn.dataset.lang);
-                });
                 // Render the regulation list dynamically
                 setTimeout(() => {
                     if (typeof window._renderParamTestButtons === 'function') {
