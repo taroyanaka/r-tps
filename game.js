@@ -553,6 +553,26 @@
             return !!card && !!card.effect && String(card.effect.kind || '').startsWith('status_');
         }
 
+        function getAttackGraphicInfo(card) {
+            const kind = card && card.effect && card.effect.kind ? String(card.effect.kind) : '';
+            if (!kind.startsWith('aoe_')) return null;
+
+            const labels = {
+                aoe_front: 'FRONT ARC',
+                aoe_radial: 'RADIUS',
+                aoe_burst_burn: 'BURST',
+                aoe_low_cost: 'WAVE',
+                aoe_drain: 'DRAIN'
+            };
+
+            return {
+                label: labels[kind] || 'AOE',
+                kind,
+                radius: card.effect.radius || 5,
+                colorHex: card.effect.colorHex || 0xec4899
+            };
+        }
+
         // --- 3D setup ---
         function initThree() {
             const container = document.getElementById('game-canvas');
@@ -1013,8 +1033,14 @@
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `p-4 rounded-2xl border ${card.colorClass} hover:scale-105 active:scale-95 transition-all cursor-pointer flex flex-col justify-between w-full md:w-48 h-64 text-left relative overflow-hidden group`;
                 cardDiv.onclick = () => selectRewardCard(card);
+                const attackGraphicInfo = getAttackGraphicInfo(card);
 
                 cardDiv.innerHTML = `
+                    ${attackGraphicInfo ? `
+                        <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-black tracking-[0.2em] border border-white/15 bg-slate-950/80 text-white/90">
+                            ${attackGraphicInfo.label}
+                        </div>
+                    ` : ''}
                     <div class="flex flex-col">
                         <div class="flex justify-between items-start">
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-950/80 font-bold border border-white/10 text-white">${card.cost}</span>
@@ -1574,6 +1600,7 @@
                     const damage = effect.damageBase !== undefined ? effect.damageBase : effectValue || 0;
                     const radius = effect.radius || 5;
                     const origin = playerMesh.position.clone();
+                    spawnAoEAttackVFX(effect.kind, origin, radius, effect.colorHex || 0xec4899);
                     let hitCount = 0;
                     battleState.enemies.forEach(enemy => {
                         const dist = effect.kind === 'aoe_front'
@@ -1698,6 +1725,42 @@
             }
         }
 
+        function spawnAoEAttackVFX(kind, origin, radius, colorHex) {
+            let geometry;
+            if (kind === 'aoe_front') {
+                geometry = new THREE.CircleGeometry(radius, 40, -Math.PI / 3, Math.PI * 2 / 3);
+            } else {
+                geometry = new THREE.RingGeometry(Math.max(0.15, radius * 0.45), radius, 48);
+            }
+
+            const material = new THREE.MeshBasicMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.28,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(origin);
+            mesh.position.y = 0.05;
+            mesh.rotation.x = -Math.PI / 2;
+            if (kind === 'aoe_front') {
+                mesh.rotation.y = cameraTargetYaw;
+            }
+            scene.add(mesh);
+
+            battleState.particles.push({
+                mesh,
+                velocity: new THREE.Vector3(0, 0, 0),
+                life: 24,
+                onUpdate: (p) => {
+                    p.mesh.material.opacity = Math.max(0, 0.28 * (p.life / 24));
+                    p.mesh.scale.setScalar(1 + (24 - p.life) * 0.01);
+                }
+            });
+        }
+
         // --- Projectile spawning helpers ---
         function fireNormalBullet() {
             playSFX('shoot');
@@ -1781,8 +1844,14 @@
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `p-3 rounded-xl border ${card.colorClass} ${opacityClass} cursor-pointer hover:-translate-y-4 hover:brightness-110 active:scale-95 transition-all flex flex-col justify-between w-36 h-48 select-none shadow-lg text-left relative`;
                 cardDiv.onclick = () => useCardIndex(idx);
+                const attackGraphicInfo = getAttackGraphicInfo(card);
 
                 cardDiv.innerHTML = `
+                    ${attackGraphicInfo ? `
+                        <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[8px] font-black tracking-[0.2em] border border-white/15 bg-slate-950/80 text-white/90">
+                            ${attackGraphicInfo.label}
+                        </div>
+                    ` : ''}
                     <div class="flex flex-col">
                         <div class="flex justify-between items-start">
                             <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-950/80 font-mono border border-white/10">${card.cost}</span>
@@ -2234,6 +2303,9 @@
             for (let i = battleState.particles.length - 1; i >= 0; i--) {
                 const p = battleState.particles[i];
                 p.mesh.position.add(p.velocity);
+                if (typeof p.onUpdate === 'function') {
+                    p.onUpdate(p);
+                }
                 p.life--;
                 if (p.life <= 0) {
                     scene.remove(p.mesh);
