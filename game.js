@@ -124,6 +124,23 @@
             return card;
         }
 
+        function refreshLocalizedCardInstances() {
+            const refreshCard = (card) => {
+                if (!card || !card.id) return card;
+                const localized = cloneCardDefinition(card.id, !!card.upgraded);
+                if (!localized) return card;
+                Object.assign(card, localized);
+                return card;
+            };
+
+            player.deck = player.deck.map(refreshCard);
+            battleState.drawPile = battleState.drawPile.map(refreshCard);
+            battleState.hand = battleState.hand.map(refreshCard);
+            battleState.discardPile = battleState.discardPile.map(refreshCard);
+        }
+
+        window.refreshLocalizedCardInstances = refreshLocalizedCardInstances;
+
         function buildInitialDeck() {
             const fixedDeck = [
                 { id: 'strike', upgraded: false },

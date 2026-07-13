@@ -92,8 +92,11 @@ function localizeCards() {
   });
   const overclock = window.CARDS.overclock;
   if (overclock && overclock.upgrade) {
-    overclock.upgrade.name = 'オーバークロック+';
-    overclock.upgrade.text = 'より強く短時間、エナジー回復速度を上げる。';
+    overclock.upgrade.name = '繧ｪ繝ｼ繝舌・繧ｯ繝ｭ繝・け+';
+    overclock.upgrade.text = '短時間、エネルギー回復量をさらに上げる。';
+  }
+  if (window.refreshLocalizedCardInstances) {
+    window.refreshLocalizedCardInstances();
   }
 }
 
