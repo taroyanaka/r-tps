@@ -26,47 +26,7 @@
         let INITIAL_DECK = [];
         let REWARD_POOL = [];
         let SHOP_POOL = [];
-        let ENEMY_DEFS = {
-            glitch: {
-                id: 'glitch',
-                name: 'Glitch Virus',
-                type: 'glitch',
-                geometry: { kind: 'octahedron', size: 0.8 },
-                color: 0xec4899,
-                baseHp: 25,
-                speed: 0.04,
-                radius: 1.0,
-                specialCardId: 'corruption',
-                specialChance: 0.35,
-                specialLabel: 'Inject Corruption'
-            },
-            sentinel: {
-                id: 'sentinel',
-                name: 'Sentinel Shield',
-                type: 'sentinel',
-                geometry: { kind: 'box', width: 1.2, height: 1.2, depth: 1.2 },
-                color: 0xf59e0b,
-                baseHp: 40,
-                speed: 0.02,
-                radius: 1.0,
-                specialCardId: null,
-                specialChance: 0,
-                specialLabel: null
-            },
-            boss: {
-                id: 'boss',
-                name: 'Mainframe Core (BOSS)',
-                type: 'boss',
-                geometry: { kind: 'icosahedron', radius: 2.5, detail: 1 },
-                color: 0xef4444,
-                baseHp: 150,
-                speed: 0.015,
-                radius: 2.5,
-                specialCardId: 'writhe',
-                specialChance: 0.4,
-                specialLabel: 'System Corruption'
-            }
-        };
+        let ENEMY_DEFS = null;
         const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
 
         const LANG_STORAGE_KEY = 'cyber_spire_language';
@@ -215,6 +175,8 @@
             try {
                 CARD_DATA = window.RTPS_CARD_DATA || null;
                 if (!CARD_DATA) throw new Error('RTPS_CARD_DATA is missing');
+                ENEMY_DEFS = window.RTPS_ENEMY_DEFS || {};
+                if (!ENEMY_DEFS.glitch) throw new Error('RTPS_ENEMY_DEFS is missing');
 
                 CARDS = CARD_DATA.cards || {};
                 UPGRADES = {};
