@@ -1550,6 +1550,7 @@
             const upgraded = !!card.upgraded;
             const effectValue = upgraded && effect.amountUpgraded !== undefined ? effect.amountUpgraded : effect.amountBase;
             const mult = getCurrentDamageMultiplier();
+            const origin = playerMesh.position.clone();
 
             if (effect.sfx) {
                 playSFX(effect.sfx);
@@ -1753,7 +1754,7 @@
                     };
                     return true;
                 case 'apply_debuff':
-case 'place_hazard_zone':
+                case 'place_hazard_zone':
 
                     if (effect.kind === 'apply_debuff') {
                         battleState.enemies.forEach(enemy => {
@@ -1784,11 +1785,9 @@ case 'place_hazard_zone':
                     if (effect.kind === 'place_hazard_zone') {
                         const effectSizeStr = card.upgraded ? (effect.sizeUpgraded || effect.sizeBase) : (effect.sizeBase || 'medium');
                         const radius = (window.RTPS_HAZARD_ZONE_SIZES && window.RTPS_HAZARD_ZONE_SIZES[effectSizeStr]) || 6.0;
-                        const geom = new THREE.CylinderGeometry(radius, radius, 0.1, 32);
-                        const mat = new THREE.MeshBasicMaterial({color: effect.colorHex || 0xff0000, transparent: true, opacity: 0.3});
-                        const mesh = new THREE.Mesh(geom, mat);
+                        const mesh = createHazardZoneMesh(radius, effect.colorHex || 0xff0000);
                         mesh.position.copy(origin);
-                        mesh.position.y = 0.1;
+                        mesh.position.y = 0;
                         scene.add(mesh);
                         battleState.hazardZones.push({
                             mesh: mesh,
@@ -1868,6 +1867,52 @@ case 'place_hazard_zone':
                 });
                 scene.add(mesh);
             }
+        }
+
+        function createHazardZoneMesh(radius, colorHex) {
+            const group = new THREE.Group();
+            const ringGeom = new THREE.RingGeometry(Math.max(0.15, radius * 0.45), radius, 48);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.26,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const ring = new THREE.Mesh(ringGeom, ringMat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = 0.05;
+            group.add(ring);
+
+            const edgeGeom = new THREE.TorusGeometry(radius, Math.max(0.04, radius * 0.03), 8, 36);
+            const edgeMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.6,
+                depthWrite: false
+            });
+            const edge = new THREE.Mesh(edgeGeom, edgeMat);
+            edge.rotation.x = Math.PI / 2;
+            edge.position.y = 0.07;
+            group.add(edge);
+
+            const outlineGeom = new THREE.EdgesGeometry(new THREE.CylinderGeometry(radius, radius, 0.02, 32));
+            const outlineMat = new THREE.LineBasicMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.45
+            });
+            const outline = new THREE.LineSegments(outlineGeom, outlineMat);
+            outline.position.y = 0.04;
+            group.add(outline);
+
+            group.userData = {
+                ring,
+                edge,
+                outline,
+                pulseSeed: Math.random() * Math.PI * 2
+            };
+            return group;
         }
 
         function spawnAoEAttackVFX(kind, origin, radius, colorHex) {
@@ -2280,11 +2325,16 @@ case 'place_hazard_zone':
                 if (battleState.onHitShieldGain.life <= 0) {
                     battleState.onHitShieldGain = null;
                 }
-            }
+                }
 
                         
                 battleState.hazardZones.forEach(zone => {
                     zone.durationFrames--;
+                    const pulse = 0.92 + Math.sin((battleState.framesElapsed || 0) / 10 + (zone.mesh.userData.pulseSeed || 0)) * 0.06;
+                    zone.mesh.scale.setScalar(pulse);
+                    if (zone.mesh.userData.ring) zone.mesh.userData.ring.material.opacity = 0.45 + (pulse - 0.92) * 2.0;
+                    if (zone.mesh.userData.edge) zone.mesh.userData.edge.material.opacity = 0.7 + (pulse - 0.92) * 1.5;
+                    if (zone.mesh.userData.outline) zone.mesh.userData.outline.material.opacity = 0.32 + (pulse - 0.92) * 1.2;
                     if (zone.durationFrames % zone.tickRate === 0) {
                         battleState.enemies.forEach(enemy => {
                             if (enemy.position.distanceTo(zone.mesh.position) <= zone.radius) {
