@@ -601,7 +601,7 @@
 
             playerMesh.userData = {
                 velocity: new THREE.Vector3(0, 0, 0),
-                speed: 0.14,
+                speed: 0.14 * 1.5,
                 facingAngle: 0
             };
         }
@@ -1733,7 +1733,11 @@
                         }
                     });
                     if (effect.kind === 'aoe_drain' && hitCount > 0) {
-                        player.hp = Math.min(player.maxHp, player.hp + hitCount * (effect.healPerHit || 2));
+                        // healPerHit in data.js was typically 2 out of 80 (2.5%)
+                        // so treat effect.healPerHit as the percentage, or explicitly use 2.5% per default
+                        const healPercent = (effect.healPerHit || 2) / 80;
+                        const healAmt = Math.floor(player.maxHp * healPercent);
+                        player.hp = Math.min(player.maxHp, player.hp + hitCount * healAmt);
                     }
                     if (effect.kind === 'aoe_burst_burn') {
                         showToast("Burning blast!");
