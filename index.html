@@ -60,7 +60,7 @@
     </div>
    </div>
   </div>
-  <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6" id="ui-container">
+  <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6">
    <div class="flex justify-between items-start w-full pointer-events-auto">
     <div class="bg-slate-950/80 backdrop-blur-md px-4 py-3 rounded-xl border border-blue-500/30 flex items-center gap-4 shadow-lg">
      <div class="flex flex-col">
@@ -192,7 +192,7 @@
     </p>
    </div>
   </div>
-  <div class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" id="help-modal">
+  <div class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
     <div class="flex justify-between items-center mb-4">
      <h2 class="text-lg font-bold text-white tracking-widest">
@@ -241,7 +241,7 @@
     </button>
    </div>
   </div>
-  <div class="hidden" id="templates">
+  <div class="hidden">
    <div class="w-full max-h-full overflow-y-auto flex justify-center items-start p-2 pt-6" id="temp-start-screen">
     <div class="max-w-md w-full glass-panel bg-slate-950/95 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-pink-500/30 text-center flex flex-col items-center pointer-events-auto shadow-2xl">
      <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mb-3 md:mb-4 shadow-lg shadow-pink-500/20 flex-shrink-0">
@@ -249,16 +249,16 @@
       </i>
      </div>
      <h1 class="text-xl md:text-2xl font-black tracking-widest text-white mb-0.5 uppercase">
-      <span id="start-title">CYBER SPIRE</span>
+      <span>CYBER SPIRE</span>
      </h1>
      <p class="text-[10px] md:text-xs text-pink-400 font-mono tracking-widest uppercase mb-4">
-      <span id="start-subtitle">TPS Slay the Spire</span>
+      <span>TPS Slay the Spire</span>
      </p>
      <div class="w-full flex flex-col gap-3">
-      <button class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0" id="start-game-btn" onclick="startGame()">
+      <button class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-pink-500/20 uppercase tracking-widest text-xs md:text-sm flex-shrink-0" onclick="startGame()">
        Connect to the Network
       </button>
-      <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" id="help-btn" onclick="document.getElementById('help-modal').classList.remove('hidden')">
+      <button class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-2 px-6 rounded-xl transition-all border border-slate-700 uppercase tracking-widest text-xs md:text-sm" onclick="document.getElementById('help-modal').classList.remove('hidden')">
        Help / Manual
       </button>
       <div class="w-full border-t border-slate-800 pt-3 mt-1">
@@ -268,7 +268,7 @@
        <button class="w-full mb-2 bg-emerald-900/50 hover:bg-emerald-800/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono py-2 px-3 rounded-lg transition-all uppercase tracking-wider" onclick="window._openAllAutoTabs && window._openAllAutoTabs()">
         Open All AUTO Tabs
        </button>
-       <div class="flex flex-col gap-2" id="param-test-list">
+       <div class="flex flex-col gap-2">
         <p class="text-slate-600 text-xs italic">
          Loading...
         </p>

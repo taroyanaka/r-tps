@@ -266,11 +266,15 @@ async function stopOwnedServer() {
 
 async function main() {
   const onlyNonVictory = process.env.RTPS_ONLY_NONVICTORY === '1' || process.env.RTPS_ONLY_NONVICTORY === 'true';
+  const onlyParam = process.env.RTPS_ONLY_PARAM;
   const params = await loadParams();
   const previousResults = await loadResults();
   const previousResultMap = new Map(previousResults.map((item) => [item.paramName, item]));
   let runParams = params;
-  if (onlyNonVictory) {
+  if (onlyParam) {
+    runParams = params.filter((cfg) => cfg.paramName === onlyParam);
+    writeRunLogLine(`Filtered params: ${runParams.length} / ${params.length} (only param: ${onlyParam})`);
+  } else if (onlyNonVictory) {
     runParams = params.filter((cfg) => previousResultMap.get(cfg.paramName)?.result !== 'victory');
     writeRunLogLine(`Filtered params: ${runParams.length} / ${params.length} (only non-victory via log/result.json)`);
   }

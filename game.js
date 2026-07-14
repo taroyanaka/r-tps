@@ -87,6 +87,9 @@
         window.refreshLocalizedCardInstances = refreshLocalizedCardInstances;
 
         function buildInitialDeck() {
+            if (PARAMS && PARAMS.paramName === 'test_all_cards') {
+                return Object.keys(CARDS).map(id => ({id, upgraded: false}));
+            }
             const fixedDeck = [
                 { id: 'strike', upgraded: false },
                 { id: 'strike', upgraded: false },
@@ -273,10 +276,13 @@
             drawLockFrames: 0,
             pendingEnergyBonus: 0,
             energyRegenBuffs: [],
+            onHpLossBuffs: [],
+            nextCardPlayedTwice: false,
             pendingRetaliation: null,
             onHitShieldGain: null,
             shieldTimer: 0,
-            invulnTimer: 0 
+            invulnTimer: 0,
+            hazardZones: [] 
         };
 
         // --- 3D graphics state (Three.js) ---
@@ -335,7 +341,7 @@
                     if (key === 'i') useCardIndex(0);
                     if (key === 'k') useCardIndex(1);
                     if (key === 'r') {
-                        if (typeof redrawHand === 'function') redrawHand();
+                        if (typeof window.redrawHand === 'function') window.redrawHand();
                     }
                     if (key === 'j' || key === 'l' || key === 'i' || key === 'k' || key === 'r') {
                         e.preventDefault();
@@ -1214,7 +1220,8 @@
                 radius: def.radius,
                 specialCardId: def.specialCardId,
                 specialChance: def.specialChance || 0,
-                specialLabel: def.specialLabel
+                specialLabel: def.specialLabel,
+                poison: 0, poisonTimer: 0, vulnerableFrames: 0, weakFrames: 0, slowFrames: 0
             };
 
             battleState.enemies.push(group);
@@ -1437,16 +1444,32 @@
             player.energy -= card.cost;
             console.log(`[DEBUG-PLAY] Card used: ${card.name} (cost: ${card.cost} / remaining energy: ${player.energy.toFixed(1)})`);
             debugState('[DEBUG-PLAY-STATE]', `card=${card.name} slot=${index}`);
+            
+            if (card.hpLoss || (card.effect && card.effect.hpLoss)) {
+                const amount = card.hpLoss || card.effect.hpLoss;
+                damagePlayer(amount, null, true);
+            }
+
             triggerCardEffect(card);
+            
+            if (battleState.nextCardPlayedTwice && card.type !== 'power') {
+                battleState.nextCardPlayedTwice = false;
+                showToast("Double Tap!");
+                setTimeout(() => { triggerCardEffect(card); }, 200);
+            }
 
             battleState.hand.splice(index, 1);
-            if (card.type === 'power') {
+            if (card.type === 'power' || card.exhaust || (card.effect && card.effect.exhaust)) {
                 showToast(`${card.name} exhausted!`);
             } else {
                 battleState.discardPile.push(card);
             }
 
-            drawCard();
+            while (battleState.hand.length < 2) {
+                const initialLen = battleState.hand.length;
+                drawCard();
+                if (battleState.hand.length === initialLen) break;
+            }
 
             renderHandUI();
             updateBattleStatsUI();
@@ -1469,8 +1492,11 @@
                 battleState.discardPile.push(c);
             }
             
-            drawCard();
-            drawCard();
+            while (battleState.hand.length < 2) {
+                const initialLen = battleState.hand.length;
+                drawCard();
+                if (battleState.hand.length === initialLen) break;
+            }
             
             renderHandUI();
             updateBattleStatsUI();
@@ -1622,6 +1648,47 @@
                     for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
                     return true;
                 }
+                                case 'strike_scaling_damage': {
+                    const strikeCount = player.deck.filter(c => (c.name || '').toLowerCase().includes('strike')).length;
+                    const damage = (effect.damageBase || 0) + strikeCount * (effect.damagePerStrike || 2);
+                    const origin = playerMesh.position.clone();
+                    spawnAoEAttackVFX('aoe_front', origin, effect.radius || 10, effect.colorHex || 0xffffff);
+                    battleState.enemies.forEach(enemy => {
+                        if (new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).length() <= (effect.radius || 10)) {
+                            enemy.userData.hp -= damage * mult * (enemy.userData.vulnerableFrames > 0 ? 1.5 : 1);
+                            spawnHitSpark(enemy.position, effect.colorHex || 0xffffff);
+                        }
+                    });
+                    return true;
+                }
+                case 'damage_add_wound_to_draw': {
+                    const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
+                    fireCardBullet(0, effect.colorHex || 0xffffff, damage * mult, 0.35);
+                    battleState.drawPile.push({id: 'wound', upgraded: false});
+                    showToast("Wound added to draw pile!");
+                    return true;
+                }
+                case 'double_tap':
+                    battleState.nextCardPlayedTwice = true;
+                    showToast("Next attack or skill will be played twice!");
+                    return true;
+                case 'lose_half_hp_max_energy':
+                    damagePlayer(Math.floor(player.hp / 2), null, true);
+                    player.energy = player.maxEnergy;
+                    updateBattleStatsUI();
+                    return true;
+                case 'power_rupture_energy':
+                    battleState.onHpLossBuffs.push({ type: 'energy_flat', amount: effectValue || 1 });
+                    showToast("Blood Energy active!");
+                    return true;
+                case 'power_rupture_strength':
+                    battleState.onHpLossBuffs.push({ type: 'strength', amount: effectValue || 1.0 });
+                    showToast("Rupture active!");
+                    return true;
+                case 'power_speed_up':
+                    player.speedMult += effectValue || 0.2;
+                    showToast("Movement speed increased!");
+                    return true;
                 case 'aoe_front':
                 case 'aoe_radial':
                 case 'aoe_burst_burn':
@@ -1643,7 +1710,7 @@
                                 return forward.dot(toEnemy) > 0.25;
                             })();
                             if (isFront) {
-                                enemy.userData.hp -= damage * mult;
+                                enemy.userData.hp -= damage * mult * (enemy.userData.vulnerableFrames > 0 ? 1.5 : 1);
                                 spawnHitSpark(enemy.position, effect.colorHex || 0xec4899);
                                 hitCount++;
                             }
@@ -1683,6 +1750,54 @@
                         amount: effectValue || 0,
                         life: effect.durationFrames || 240
                     };
+                    return true;
+                case 'apply_debuff':
+case 'place_hazard_zone':
+
+                    if (effect.kind === 'apply_debuff') {
+                        battleState.enemies.forEach(enemy => {
+                            if (enemy.position.distanceTo(origin) <= effect.radius) {
+                                const isFront = !effect.isFront || (() => {
+                                    const forward = new THREE.Vector3(Math.sin(cameraTargetYaw), 0, Math.cos(cameraTargetYaw));
+                                    const toEnemy = new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).normalize();
+                                    return forward.dot(toEnemy) > 0.25;
+                                })();
+                                if (isFront) {
+                                    const types = Array.isArray(effect.debuffTypes) ? effect.debuffTypes : (effect.debuffType ? [effect.debuffType] : []);
+                                    for (const t of types) {
+                                        if (t === 'poison') enemy.userData.poison += effectValue;
+                                        else if (t === 'vulnerable') enemy.userData.vulnerableFrames += effectValue;
+                                        else if (t === 'weak') enemy.userData.weakFrames += effectValue;
+                                        else if (t === 'slow') enemy.userData.slowFrames += effectValue;
+                                    }
+                                    spawnHitSpark(enemy.position, 0x22c55e);
+                                }
+                            }
+                        });
+                        if (effect.gainShieldBase) {
+                            const shieldVal = card.upgraded ? effect.gainShieldUpgraded : effect.gainShieldBase;
+                            player.shield += shieldVal || 0;
+                            spawnShieldVFX();
+                        }
+                    }
+                    if (effect.kind === 'place_hazard_zone') {
+                        const effectSizeStr = card.upgraded ? (effect.sizeUpgraded || effect.sizeBase) : (effect.sizeBase || 'medium');
+                        const radius = (window.RTPS_HAZARD_ZONE_SIZES && window.RTPS_HAZARD_ZONE_SIZES[effectSizeStr]) || 6.0;
+                        const geom = new THREE.CylinderGeometry(radius, radius, 0.1, 32);
+                        const mat = new THREE.MeshBasicMaterial({color: effect.colorHex || 0xff0000, transparent: true, opacity: 0.3});
+                        const mesh = new THREE.Mesh(geom, mat);
+                        mesh.position.copy(origin);
+                        mesh.position.y = 0.1;
+                        scene.add(mesh);
+                        battleState.hazardZones.push({
+                            mesh: mesh,
+                            radius: radius,
+                            durationFrames: effect.durationFrames || 300,
+                            tickRate: effect.tickRate || 60,
+                            hazardEffect: effect.hazardEffect
+                        });
+                    }
+
                     return true;
                 case 'conditional_temp_damage_buff':
                     if (battleState.enemies.some(enemy => enemy.userData.intent && enemy.userData.intent.startsWith('attack'))) {
@@ -1857,7 +1972,8 @@
                 mesh: mesh,
                 velocity: velocity,
                 damage: damage,
-                life: 100
+                life: 100,
+                attacker: enemy
             });
         }
 
@@ -2165,7 +2281,32 @@
                 }
             }
 
-                        // Enemy time scaling
+                        
+                battleState.hazardZones.forEach(zone => {
+                    zone.durationFrames--;
+                    if (zone.durationFrames % zone.tickRate === 0) {
+                        battleState.enemies.forEach(enemy => {
+                            if (enemy.position.distanceTo(zone.mesh.position) <= zone.radius) {
+                                if (zone.hazardEffect.type === 'damage') {
+                                    enemy.userData.hp -= zone.hazardEffect.amount * (enemy.userData.vulnerableFrames > 0 ? 1.5 : 1);
+                                    spawnHitSpark(enemy.position, 0xef4444);
+                                } else if (zone.hazardEffect.type === 'poison') {
+                                    enemy.userData.poison += zone.hazardEffect.amount;
+                                    spawnHitSpark(enemy.position, 0xa3e635);
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                for (let i = battleState.hazardZones.length - 1; i >= 0; i--) {
+                    if (battleState.hazardZones[i].durationFrames <= 0) {
+                        scene.remove(battleState.hazardZones[i].mesh);
+                        battleState.hazardZones.splice(i, 1);
+                    }
+                }
+
+            // Enemy time scaling
             battleState.framesElapsed = (battleState.framesElapsed || 0) + 1;
             const powerUpInterval = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].enemyPowerUpInterval) || 600;
             if (battleState.framesElapsed % powerUpInterval === 0) {
@@ -2241,7 +2382,7 @@
 
                             if (dist < (enemy.userData.radius + 0.4)) {
                                 playSFX('hit');
-                                enemy.userData.hp -= p.damage;
+                                enemy.userData.hp -= p.damage * (enemy.userData.vulnerableFrames > 0 ? 1.5 : 1);
                                 spawnHitSpark(p.mesh.position, 0x06b6d4);
                                 if (battleState.onHitShieldGain) {
                                     player.shield += battleState.onHitShieldGain.amount || 0;
@@ -2263,7 +2404,7 @@
                         if (dist < 1.1) {
                             if (battleState.invulnTimer <= 0) {
                                 playSFX('hit');
-                                if (damagePlayer(p.damage * (p.mesh.userData.damageMult || 1.0))) return;
+                                if (damagePlayer(p.damage * (p.mesh.userData.damageMult || 1.0), p.attacker)) return;
                                 spawnHitSpark(playerMesh.position, 0xef4444);
                             }
                             isRemoved = true;
@@ -2308,15 +2449,30 @@
                     continue;
                 }
 
+                
+                if (enemy.userData.vulnerableFrames > 0) enemy.userData.vulnerableFrames--;
+                if (enemy.userData.weakFrames > 0) enemy.userData.weakFrames--;
+                if (enemy.userData.slowFrames > 0) enemy.userData.slowFrames--;
+                
+                if (enemy.userData.poison > 0) {
+                    enemy.userData.poisonTimer--;
+                    if (enemy.userData.poisonTimer <= 0) {
+                        enemy.userData.hp -= enemy.userData.poison * (enemy.userData.vulnerableFrames > 0 ? 1.5 : 1);
+                        enemy.userData.poison--;
+                        enemy.userData.poisonTimer = 60;
+                        spawnHitSpark(enemy.position, 0xa3e635);
+                    }
+                }
+
                 const toPlayer = new THREE.Vector3().copy(playerMesh.position).sub(enemy.position);
                 const distToPlayer = toPlayer.length();
                 toPlayer.y = 0;
                 toPlayer.normalize();
 
                 if (distToPlayer > 6) {
-                    enemy.position.add(toPlayer.multiplyScalar(enemy.userData.speed));
+                    enemy.position.add(toPlayer.multiplyScalar(enemy.userData.speed * (enemy.userData.slowFrames > 0 ? 0.5 : 1.0)));
                 } else if (distToPlayer < 3) {
-                    enemy.position.sub(toPlayer.multiplyScalar(enemy.userData.speed));
+                    enemy.position.sub(toPlayer.multiplyScalar(enemy.userData.speed * (enemy.userData.slowFrames > 0 ? 0.5 : 1.0)));
                 }
 
                 enemy.userData.intentTimer--;
@@ -2413,16 +2569,36 @@
             }
         }
 
-        function damagePlayer(amount) {
+        function damagePlayer(amount, attacker = null, bypassShield = false) {
+            if (attacker && attacker.userData && attacker.userData.weakFrames > 0) {
+                amount *= 0.75;
+            }
             const hadShield = player.shield > 0;
-            if (player.shield > 0) {
+            let actualHpLoss = 0;
+            if (player.shield > 0 && !bypassShield) {
                 player.shield -= amount;
                 if (player.shield < 0) {
+                    actualHpLoss = -player.shield;
                     player.hp += player.shield;
                     player.shield = 0;
                 }
             } else {
+                actualHpLoss = amount;
                 player.hp -= amount;
+            }
+            
+            if (actualHpLoss > 0 && battleState.onHpLossBuffs) {
+                for (const buff of battleState.onHpLossBuffs) {
+                    if (buff.type === 'energy_flat') {
+                        player.energy = Math.min(player.maxEnergy, player.energy + buff.amount);
+                        showToast("Energy recovered!");
+                    } else if (buff.type === 'strength') {
+                        player.damageMult += buff.amount;
+                        showToast("Strength increased!");
+                        spawnBuffVFX();
+                    }
+                }
+                updateBattleStatsUI();
             }
 
             console.log(`[DEBUG-DAMAGE] Player hit: ${amount} damage (Remaining HP: ${player.hp.toFixed(1)} / Shield: ${player.shield.toFixed(1)})`);

@@ -1,0 +1,17 @@
+[RUN] log dir cleared
+[RUN] saving stdout/stderr to playwright_run_2026-07-14T00-22-13-179Z.txt
+[test_all_cards] error: Error: Stalled for more than 120000ms while state=idle
+    at waitForCompletion (file:///C:/Users/taroyanaka/Downloads/r-tps/pw_runner.mjs:138:13)
+    at async runOne (file:///C:/Users/taroyanaka/Downloads/r-tps/pw_runner.mjs:177:20)
+    at async worker (file:///C:/Users/taroyanaka/Downloads/r-tps/pw_runner.mjs:194:22)
+    at async Promise.all (index 0)
+    at async runPool (file:///C:/Users/taroyanaka/Downloads/r-tps/pw_runner.mjs:206:3)
+    at async main (file:///C:/Users/taroyanaka/Downloads/r-tps/pw_runner.mjs:301:23)
+[
+  {
+    "paramName": "test_all_cards",
+    "result": "error",
+    "error": "Stalled for more than 120000ms while state=idle"
+  }
+]
+ZIP: regulation_result_20260714092417.zip
