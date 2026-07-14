@@ -408,8 +408,11 @@
             });
         }
 
-        function fireCardBullet(angleOffset, colorHex, damage, size) {
-            const targetY = cameraTargetYaw + angleOffset;
+        function fireCardBullet(angleOffset, colorHex, damage, size, isEnemy = false, caster = null) {
+            let targetY = cameraTargetYaw + angleOffset;
+            if (isEnemy && caster) {
+                targetY = Math.atan2(playerMesh.position.x - caster.position.x, playerMesh.position.z - caster.position.z) + angleOffset;
+            }
             const velocity = new THREE.Vector3(
                 Math.sin(targetY) * 0.6,
                 0,
@@ -419,12 +422,12 @@
             const geom = new THREE.SphereGeometry(size, 8, 8);
             const mat = new THREE.MeshBasicMaterial({ color: colorHex });
             const mesh = new THREE.Mesh(geom, mat);
-            mesh.position.copy(playerMesh.position);
+            mesh.position.copy(isEnemy && caster ? caster.position : playerMesh.position);
             mesh.position.y += 0.2;
             scene.add(mesh);
 
             battleState.projectiles.push({
-                type: 'player_card',
+                type: isEnemy ? 'enemy_card' : 'player_card',
                 mesh: mesh,
                 velocity: velocity,
                 damage: damage,
@@ -750,7 +753,7 @@
                             }
                         }
                     } 
-                    else if (p.type === 'enemy_normal') {
+                    else if (p.type.startsWith('enemy')) {
                         const dist = p.mesh.position.distanceTo(playerMesh.position);
                         if (dist < 1.1) {
                             if (battleState.invulnTimer <= 0) {

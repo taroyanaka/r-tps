@@ -197,6 +197,15 @@
             if (applyDataDrivenCardEffect(card)) return;
 
             const mult = getCurrentDamageMultiplier();
+            if (isEnemy) {
+                var showToast = function(){};
+                var spawnBuffVFX = function(){};
+                var spawnShieldVFX = function(){};
+                var drawCard = function(){};
+                var updateBattleStatsUI = function(){};
+                var addTempDamageBuff = function(){};
+            }
+
             const dmgStrike = card.upgraded ? 10 : 6;
             const dmgShotgun = card.upgraded ? 7 : 5;
             const defAmt = card.upgraded ? 16 : 10;
@@ -233,13 +242,24 @@
             }
         }
 
-        function applyDataDrivenCardEffect(card) {
+        function applyDataDrivenCardEffect(card, caster = null) {
+            const isEnemy = caster !== null;
+            const facingAngle = isEnemy ? Math.atan2(playerMesh.position.x - caster.position.x, playerMesh.position.z - caster.position.z) : playerMesh.userData.facingAngle;
             const effect = card.effect;
             if (!effect) return false;
 
             const upgraded = !!card.upgraded;
             const effectValue = upgraded && effect.amountUpgraded !== undefined ? effect.amountUpgraded : effect.amountBase;
             const mult = getCurrentDamageMultiplier();
+            if (isEnemy) {
+                var showToast = function(){};
+                var spawnBuffVFX = function(){};
+                var spawnShieldVFX = function(){};
+                var drawCard = function(){};
+                var updateBattleStatsUI = function(){};
+                var addTempDamageBuff = function(){};
+            }
+
 
             if (effect.sfx) {
                 playSFX(effect.sfx);
@@ -252,7 +272,7 @@
                     for (let i = 0; i < count; i++) {
                         setTimeout(() => {
                             if (gameState !== 'battle') return;
-                            fireCardBullet(effect.angleOffset || 0, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                            fireCardBullet(effect.angleOffset || 0, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25, isEnemy, caster);
                         }, i * (effect.stepMs || 150));
                     }
                     return true;
@@ -262,7 +282,7 @@
                     const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
                     for (let i = 0; i < count; i++) {
                         const angleOffset = (Math.random() - 0.5) * (effect.spread || 0.3);
-                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25, isEnemy, caster);
                     }
                     return true;
                 }
@@ -334,7 +354,7 @@
                     const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
                     for (let i = 0; i < count; i++) {
                         const angleOffset = (Math.random() - 0.5) * (effect.spread || 0.35);
-                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25);
+                        fireCardBullet(angleOffset, effect.colorHex || 0xffffff, damage * mult, effect.size || 0.25, isEnemy, caster);
                     }
                     for (let i = 0; i < (effect.drawCount || 1); i++) drawCard();
                     return true;
@@ -346,26 +366,44 @@
                 case 'aoe_drain': {
                     const damage = effect.damageBase !== undefined ? effect.damageBase : effectValue || 0;
                     const radius = effect.radius || 5;
-                    const origin = playerMesh.position.clone();
+                    const origin = caster ? caster.position.clone() : playerMesh.position.clone();
                     spawnAoEAttackVFX(effect.kind, origin, radius, effect.colorHex || 0xec4899);
                     let hitCount = 0;
-                    battleState.enemies.forEach(enemy => {
+                    if (isEnemy) {
                         const dist = effect.kind === 'aoe_front'
-                            ? new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).length()
-                            : enemy.position.distanceTo(origin);
+                            ? new THREE.Vector3(playerMesh.position.x - origin.x, 0, playerMesh.position.z - origin.z).length()
+                            : playerMesh.position.distanceTo(origin);
                         if (dist <= radius) {
                             const isFront = effect.kind !== 'aoe_front' || (() => {
-                                const forward = new THREE.Vector3(Math.sin(cameraTargetYaw), 0, Math.cos(cameraTargetYaw));
-                                const toEnemy = new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).normalize();
-                                return forward.dot(toEnemy) > 0.25;
+                                const forward = new THREE.Vector3(Math.sin(facingAngle), 0, Math.cos(facingAngle));
+                                const toPlayer = new THREE.Vector3(playerMesh.position.x - origin.x, 0, playerMesh.position.z - origin.z).normalize();
+                                return forward.dot(toPlayer) > 0.25;
                             })();
                             if (isFront) {
-                                enemy.userData.hp -= damage * mult;
-                                spawnHitSpark(enemy.position, effect.colorHex || 0xec4899);
+                                damagePlayer(damage * mult);
+                                spawnHitSpark(playerMesh.position, effect.colorHex || 0xec4899);
                                 hitCount++;
                             }
                         }
-                    });
+                    } else {
+                        battleState.enemies.forEach(enemy => {
+                            const dist = effect.kind === 'aoe_front'
+                                ? new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).length()
+                                : enemy.position.distanceTo(origin);
+                            if (dist <= radius) {
+                                const isFront = effect.kind !== 'aoe_front' || (() => {
+                                    const forward = new THREE.Vector3(Math.sin(cameraTargetYaw), 0, Math.cos(cameraTargetYaw));
+                                    const toEnemy = new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).normalize();
+                                    return forward.dot(toEnemy) > 0.25;
+                                })();
+                                if (isFront) {
+                                    enemy.userData.hp -= damage * mult;
+                                    spawnHitSpark(enemy.position, effect.colorHex || 0xec4899);
+                                    hitCount++;
+                                }
+                            }
+                        });
+                    }
                     if (effect.kind === 'aoe_drain' && hitCount > 0) {
                         player.hp = Math.min(player.maxHp, player.hp + hitCount * (effect.healPerHit || 2));
                     }
