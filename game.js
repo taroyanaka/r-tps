@@ -1016,8 +1016,9 @@
             container.innerHTML = '';
 
             const cardPool = REWARD_POOL.length > 0 ? REWARD_POOL : getPoolForType('reward');
+            const rewardCardCount = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].rewardCardCount) || 3;
             const selected = [];
-            while (selected.length < 3) {
+            while (selected.length < rewardCardCount) {
                 const rId = pickWeightedCardId('reward') || cardPool[Math.floor(Math.random() * cardPool.length)];
                 if (!selected.includes(rId)) {
                     selected.push(rId);
