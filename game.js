@@ -2129,29 +2129,6 @@
                 }
                 extraStatsDiv.innerHTML = `Time: ${timeSec}s | Enemy DMG: x${dmgMult.toFixed(2)}${buffText}`;
             }
-            
-            // Extra Battle Stats (Time, Dmg, Buffs)
-            let extraStatsDiv = document.getElementById('extra-battle-stats');
-            if (!extraStatsDiv) {
-                extraStatsDiv = document.createElement('div');
-                extraStatsDiv.id = 'extra-battle-stats';
-                extraStatsDiv.className = 'absolute top-[-40px] left-4 bg-slate-900/80 p-2 rounded text-xs font-mono text-cyan-300 border border-cyan-500/50 pointer-events-none';
-                const tray = document.getElementById('battle-tray');
-                if (tray) tray.appendChild(extraStatsDiv);
-            }
-            if (extraStatsDiv) {
-                const timeSec = Math.floor((battleState.framesElapsed || 0) / 60);
-                let dmgMult = 1.0;
-                if (battleState.enemies.length > 0 && battleState.enemies[0].userData.damageMult) {
-                    dmgMult = battleState.enemies[0].userData.damageMult;
-                }
-                let buffText = "";
-                if (battleState.tempDamageBuffs && battleState.tempDamageBuffs.length > 0) {
-                    const maxBuffLife = Math.max(...battleState.tempDamageBuffs.map(b => b.life));
-                    buffText = `<br>Buff: ${(maxBuffLife/60).toFixed(1)}s`;
-                }
-                extraStatsDiv.innerHTML = `Time: ${timeSec}s | Enemy DMG: x${dmgMult.toFixed(2)}${buffText}`;
-            }
             nodesContainer.innerHTML = '';
             for (let i = 1; i <= player.maxEnergy; i++) {
                 const node = document.createElement('div');
