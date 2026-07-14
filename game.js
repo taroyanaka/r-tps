@@ -88,7 +88,7 @@
 
         function buildInitialDeck() {
             if (PARAMS && PARAMS.paramName === 'test_all_cards') {
-                return Object.keys(CARDS).map(id => ({id, upgraded: false}));
+                return Object.keys(CARDS).filter(id => id !== 'templates' && CARDS[id].type).map(id => ({id, upgraded: false}));
             }
             const fixedDeck = [
                 { id: 'strike', upgraded: false },
@@ -790,6 +790,10 @@
 
                 container.appendChild(row);
             }
+            setTimeout(() => {
+                const activeNode = container.querySelector('.ring-purple-500\\/50');
+                if (activeNode) activeNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
 
         function selectMapNode(node, depth) {
@@ -854,9 +858,9 @@
                 }
 
                 itemDiv.innerHTML = `
-                    <div class="flex-1 pr-4 pointer-events-none">
-                        <p class="text-sm font-bold text-white">${title}</p>
-                        <p class="text-[10px] text-gray-400 mt-1">${desc}</p>
+                    <div class="flex-1 min-w-0 pr-4 pointer-events-none">
+                        <p class="text-sm font-bold text-white truncate">${title}</p>
+                        <p class="text-[10px] text-gray-400 mt-1 break-words whitespace-normal">${desc}</p>
                     </div>
                     <button class="shop-buy-btn flex flex-col items-center justify-center p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 transition-all w-20 flex-shrink-0"
                             ${player.gold < item.cost ? 'disabled' : ''}>
@@ -1398,6 +1402,19 @@
                 warningLineMesh.material.dispose();
                 warningLineMesh = null;
             }
+            if (battleState.hazardZones) {
+                battleState.hazardZones.forEach(z => {
+                    scene.remove(z.mesh);
+                    z.mesh.traverse(child => {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                            else child.material.dispose();
+                        }
+                    });
+                });
+                battleState.hazardZones = [];
+            }
         }
 
         // --- Deck build and draw engine ---
@@ -1409,11 +1426,11 @@
         }
 
         function drawCard() {
-            if (battleState.hand.length >= 2) return;
-            if (battleState.drawLockFrames > 0) return;
+            if (battleState.hand.length >= 2) return false;
+            if (battleState.drawLockFrames > 0) return false;
 
             if (battleState.drawPile.length === 0) {
-                if (battleState.discardPile.length === 0) return;
+                if (battleState.discardPile.length === 0) return false;
                 battleState.drawPile = [...battleState.discardPile];
                 shuffleArray(battleState.drawPile);
                 battleState.discardPile = [];
@@ -1428,6 +1445,7 @@
             console.log(`[DEBUG-DECK] Card drawn: ${card.name} (Draw pile remaining: ${battleState.drawPile.length} cards)`);
             debugState('[DEBUG-DECK-DRAW]', `card=${card.name} upgraded=${!!card.upgraded}`);
             handleDrawnCard(card);
+            return true;
         }
 
         // --- Card activation system ---
@@ -1467,9 +1485,7 @@
             }
 
             while (battleState.hand.length < 2) {
-                const initialLen = battleState.hand.length;
-                drawCard();
-                if (battleState.hand.length === initialLen) break;
+                if (!drawCard()) break;
             }
 
             renderHandUI();
@@ -1494,9 +1510,7 @@
             }
             
             while (battleState.hand.length < 2) {
-                const initialLen = battleState.hand.length;
-                drawCard();
-                if (battleState.hand.length === initialLen) break;
+                if (!drawCard()) break;
             }
             
             renderHandUI();
