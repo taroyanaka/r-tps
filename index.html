@@ -453,12 +453,15 @@
         Select items to purchase
        </p>
       </div>
-      <button class="flex items-center gap-2 text-xs md:text-sm bg-slate-900 hover:bg-slate-800 text-gray-300 font-bold border border-slate-700 px-4 py-2 rounded-xl transition-colors" onclick="leaveShop()">
-       <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i> Exit Shop
-      </button>
-     </div>
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2 overflow-y-auto max-h-[55vh] pr-1 hide-scrollbar" id="shop-items-container">
-     </div>
+       <div class="flex items-center gap-3">
+        <div id="shop-reroll-container"></div>
+        <button class="flex items-center gap-2 text-xs md:text-sm bg-slate-900 hover:bg-slate-800 text-gray-300 font-bold border border-slate-700 px-4 py-2 rounded-xl transition-colors" onclick="leaveShop()">
+         <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i> Exit Shop
+        </button>
+       </div>
+      </div>
+      <div class="flex flex-col gap-3 mb-2 overflow-y-auto max-h-[55vh] pr-1 hide-scrollbar" id="shop-items-container">
+      </div>
     </div>
    </div>
    <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-gameover-screen">

@@ -835,14 +835,14 @@
             
             // Add Reroll UI
             const rerollCost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
-            const rerollDiv = document.createElement('div');
-            rerollDiv.className = "mb-4 text-center";
-            rerollDiv.innerHTML = `
-                <button onclick="rerollShop()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded" ${player.gold < rerollCost ? 'disabled' : ''}>
-                    Reroll Shop (Cost: <i class="fa-solid fa-coins mr-1"></i>${rerollCost})
-                </button>
-            `;
-            container.appendChild(rerollDiv);
+            const rerollContainer = panelElement.querySelector('#shop-reroll-container');
+            if (rerollContainer) {
+                rerollContainer.innerHTML = `
+                    <button onclick="rerollShop()" class="flex items-center gap-2 text-xs md:text-sm bg-slate-900 hover:bg-slate-800 text-blue-300 font-bold border border-slate-700 px-4 py-2 rounded-xl transition-colors disabled:opacity-50" ${player.gold < rerollCost ? 'disabled' : ''}>
+                        <i class="fa-solid fa-rotate"></i> Reroll (<i class="fa-solid fa-coins text-amber-400"></i> ${rerollCost})
+                    </button>
+                `;
+            }
 
             const shopSlots = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopSlotCount) || 8;
             const shopPool = [];
@@ -852,7 +852,7 @@
             shopPool.push({ card: null, type: 'heal', cost: 50, label: 'Full System Repair Patch', desc: 'Restore HP to the maximum.' });
 
             const gridDiv = document.createElement('div');
-            gridDiv.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+            gridDiv.className = "grid grid-cols-1 gap-4 w-full";
             container.appendChild(gridDiv);
             let itemContainer = gridDiv;
 
@@ -1470,7 +1470,7 @@
             if (index < 0 || index >= battleState.hand.length) return;
 
             const card = battleState.hand[index];
-            if (player.energy < card.cost) {
+            if (isNaN(player.energy) || player.energy < card.cost) {
                 showToast("Not enough energy!");
                 debugState('[DEBUG-PLAY-BLOCKED]', `card=${card.name} cost=${card.cost}`);
                 return;
@@ -1511,7 +1511,7 @@
         window.redrawHand = function() {
             if (gameState !== 'battle') return;
             const cost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].redrawCost) || 1;
-            if (player.energy < cost) {
+            if (isNaN(player.energy) || player.energy < cost) {
                 showToast("Not enough energy to redraw!");
                 return;
             }
@@ -1696,7 +1696,7 @@
                 case 'damage_add_wound_to_draw': {
                     const damage = upgraded && effect.damageUpgraded !== undefined ? effect.damageUpgraded : effect.damageBase;
                     fireCardBullet(0, effect.colorHex || 0xffffff, damage * mult, 0.35);
-                    battleState.drawPile.push({id: 'wound', upgraded: false});
+                    battleState.drawPile.push(cloneCardDefinition('wound', false));
                     showToast("Wound added to draw pile!");
                     return true;
                 }
@@ -2064,7 +2064,7 @@
             container.oncontextmenu = (e) => e.preventDefault();
 
             battleState.hand.forEach((card, idx) => {
-                const isAffordable = player.energy >= card.cost;
+                const isAffordable = !isNaN(player.energy) && player.energy >= card.cost;
                 const opacityClass = isAffordable ? 'opacity-100' : 'opacity-50';
 
                 const cardDiv = document.createElement('div');
@@ -2106,6 +2106,29 @@
 
         function updateBattleStatsUI() {
             const nodesContainer = document.getElementById('energy-nodes');
+            
+            // Extra Battle Stats (Time, Dmg, Buffs)
+            let extraStatsDiv = document.getElementById('extra-battle-stats');
+            if (!extraStatsDiv) {
+                extraStatsDiv = document.createElement('div');
+                extraStatsDiv.id = 'extra-battle-stats';
+                extraStatsDiv.className = 'absolute top-[-40px] left-4 bg-slate-900/80 p-2 rounded text-xs font-mono text-cyan-300 border border-cyan-500/50 pointer-events-none';
+                const tray = document.getElementById('battle-tray');
+                if (tray) tray.appendChild(extraStatsDiv);
+            }
+            if (extraStatsDiv) {
+                const timeSec = Math.floor((battleState.framesElapsed || 0) / 60);
+                let dmgMult = 1.0;
+                if (battleState.enemies.length > 0 && battleState.enemies[0].userData.damageMult) {
+                    dmgMult = battleState.enemies[0].userData.damageMult;
+                }
+                let buffText = "";
+                if (battleState.tempDamageBuffs && battleState.tempDamageBuffs.length > 0) {
+                    const maxBuffLife = Math.max(...battleState.tempDamageBuffs.map(b => b.life));
+                    buffText = `<br>Buff: ${(maxBuffLife/60).toFixed(1)}s`;
+                }
+                extraStatsDiv.innerHTML = `Time: ${timeSec}s | Enemy DMG: x${dmgMult.toFixed(2)}${buffText}`;
+            }
             
             // Extra Battle Stats (Time, Dmg, Buffs)
             let extraStatsDiv = document.getElementById('extra-battle-stats');
@@ -2219,7 +2242,7 @@
                         playedCard = false;
                         for (let idx = 0; idx < battleState.hand.length; idx++) {
                             const card = battleState.hand[idx];
-                            if (player.energy >= card.cost) {
+                            if (!isNaN(player.energy) && player.energy >= card.cost) {
                                 console.log(`[DEBUG-AUTO-AI] Auto-play card: ${card.name} (hand slot: ${idx+1})`);
                                 useCardIndex(idx);
                                 playedCard = true;

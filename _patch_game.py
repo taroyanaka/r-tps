@@ -228,14 +228,14 @@ replacements = [
             
             // Add Reroll UI
             const rerollCost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
-            const rerollDiv = document.createElement('div');
-            rerollDiv.className = "mb-4 text-center";
-            rerollDiv.innerHTML = `
-                <button onclick="rerollShop()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded" ${player.gold < rerollCost ? 'disabled' : ''}>
-                    Reroll Shop (Cost: <i class="fa-solid fa-coins mr-1"></i>${rerollCost})
-                </button>
-            `;
-            container.appendChild(rerollDiv);
+            const rerollContainer = panelElement.querySelector('#shop-reroll-container');
+            if (rerollContainer) {
+                rerollContainer.innerHTML = `
+                    <button onclick="rerollShop()" class="flex items-center gap-2 text-xs md:text-sm bg-slate-900 hover:bg-slate-800 text-blue-300 font-bold border border-slate-700 px-4 py-2 rounded-xl transition-colors disabled:opacity-50" ${player.gold < rerollCost ? 'disabled' : ''}>
+                        <i class="fa-solid fa-rotate"></i> Reroll (<i class="fa-solid fa-coins text-amber-400"></i> ${rerollCost})
+                    </button>
+                `;
+            }
 
             const shopSlots = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopSlotCount) || 8;
             const shopPool = [];
@@ -245,7 +245,7 @@ replacements = [
             shopPool.push({ card: null, type: 'heal', cost: 50, label: 'Full System Repair Patch', desc: 'Restore HP to the maximum.' });
 
             const gridDiv = document.createElement('div');
-            gridDiv.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+            gridDiv.className = "grid grid-cols-1 gap-4 w-full";
             container.appendChild(gridDiv);
             let itemContainer = gridDiv;
 
