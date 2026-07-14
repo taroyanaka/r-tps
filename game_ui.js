@@ -2,6 +2,7 @@
         function renderHandUI() {
             const container = document.getElementById('hand-cards');
             container.innerHTML = '';
+            container.oncontextmenu = (e) => e.preventDefault();
 
             battleState.hand.forEach((card, idx) => {
                 const isAffordable = player.energy >= card.cost;
@@ -9,7 +10,14 @@
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `p-3 rounded-xl border ${card.colorClass} ${opacityClass} cursor-pointer hover:-translate-y-4 hover:brightness-110 active:scale-95 transition-all flex flex-col justify-between w-36 h-48 select-none shadow-lg text-left relative`;
-                cardDiv.onclick = () => useCardIndex(idx);
+                cardDiv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    useCardIndex(idx);
+                });
+                cardDiv.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    useCardIndex(Math.min(1, battleState.hand.length - 1));
+                });
                 const attackGraphicInfo = getAttackGraphicInfo(card);
 
                 cardDiv.innerHTML = `

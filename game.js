@@ -842,7 +842,7 @@
 
             shopPool.forEach((item, idx) => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = "shop-item bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex justify-between items-center outline-none focus:ring-2 focus:ring-yellow-400";
+                itemDiv.className = "shop-item bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center gap-4 outline-none focus:ring-2 focus:ring-yellow-400";
                 itemDiv.tabIndex = 0;
                 
                 let title = "";
@@ -858,11 +858,11 @@
                 }
 
                 itemDiv.innerHTML = `
-                    <div class="flex-1 min-w-0 pr-4 pointer-events-none">
-                        <p class="text-sm font-bold text-white truncate">${title}</p>
-                        <p class="text-[10px] text-gray-400 mt-1 break-words whitespace-normal">${desc}</p>
+                    <div class="flex-1 min-w-0 pointer-events-none">
+                        <p class="text-sm font-bold text-white break-words">${title}</p>
+                        <p class="text-[10px] text-gray-400 mt-1 leading-relaxed break-words whitespace-normal">${desc}</p>
                     </div>
-                    <button class="shop-buy-btn flex flex-col items-center justify-center p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 transition-all w-20 flex-shrink-0"
+                    <button class="shop-buy-btn flex flex-col items-center justify-center px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 active:scale-95 transition-all w-full md:w-24 flex-shrink-0 md:self-stretch"
                             ${player.gold < item.cost ? 'disabled' : ''}>
                         <span class="text-xs ${costColor} font-bold font-mono"><i class="fa-solid fa-coins mr-1"></i>${item.cost}</span>
                         <span class="text-[9px] text-gray-300 mt-1 font-bold">Buy</span>
@@ -2045,6 +2045,7 @@
         function renderHandUI() {
             const container = document.getElementById('hand-cards');
             container.innerHTML = '';
+            container.oncontextmenu = (e) => e.preventDefault();
 
             battleState.hand.forEach((card, idx) => {
                 const isAffordable = player.energy >= card.cost;
@@ -2052,7 +2053,14 @@
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `p-3 rounded-xl border ${card.colorClass} ${opacityClass} cursor-pointer hover:-translate-y-4 hover:brightness-110 active:scale-95 transition-all flex flex-col justify-between w-36 h-48 select-none shadow-lg text-left relative`;
-                cardDiv.onclick = () => useCardIndex(idx);
+                cardDiv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    useCardIndex(idx);
+                });
+                cardDiv.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    useCardIndex(Math.min(1, battleState.hand.length - 1));
+                });
                 const attackGraphicInfo = getAttackGraphicInfo(card);
 
                 cardDiv.innerHTML = `
