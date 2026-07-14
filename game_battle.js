@@ -106,6 +106,13 @@
             battleState.shieldTimer = 0;
             battleState.invulnTimer = 0;
             battleState.framesElapsed = 0;
+            battleState.enemyPool = [];
+            const allEnemies = Object.keys(window.RTPS_ENEMY_DEFS).filter(k => window.RTPS_ENEMY_DEFS[k].type !== 'boss');
+            const poolSize = PARAMS.enemyTypesPerBattle || 5;
+            for(let i=0; i<poolSize && allEnemies.length > 0; i++) {
+                const idx = Math.floor(Math.random() * allEnemies.length);
+                battleState.enemyPool.push(allEnemies.splice(idx, 1)[0]);
+            }
             isFiring = false;
             normalShootCooldown = 0;
             player.shield = 0;
@@ -150,8 +157,7 @@
                 const x = Math.cos(angle) * dist;
                 const z = Math.sin(angle) * dist;
 
-            const enemyRoll = Math.random();
-            const enemyType = enemyRoll < 0.18 ? 'scout' : (enemyRoll < 0.59 ? 'glitch' : 'sentinel');
+            const enemyType = battleState.enemyPool[Math.floor(Math.random() * battleState.enemyPool.length)];
             createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
         }
         }
@@ -202,6 +208,7 @@
                 intentSprite: intentSprite,
                 radius: def.radius,
                 specialCardId: def.specialCardId,
+                specialCardIds: def.specialCardIds,
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel
             };
@@ -212,7 +219,9 @@
         }
 
         function spawnBoss() {
-            const def = getEnemyDef('boss');
+            const bossIds = Object.keys(window.RTPS_ENEMY_DEFS).filter(k => window.RTPS_ENEMY_DEFS[k].type === 'boss');
+            const bossId = bossIds[Math.floor(Math.random() * bossIds.length)];
+            const def = getEnemyDef(bossId);
             const group = new THREE.Group();
             const geometry = new THREE.IcosahedronGeometry(def.geometry.radius, def.geometry.detail);
             const color = def.color; 
@@ -252,6 +261,7 @@
                 intentSprite: intentSprite,
                 radius: def.radius,
                 specialCardId: def.specialCardId,
+                specialCardIds: def.specialCardIds,
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel,
                 specialCooldown: 180
@@ -816,9 +826,13 @@
 
                 enemy.userData.intentTimer--;
                 if (enemy.userData.intentTimer <= 0) {
-                    const hasSpecial = !!enemy.userData.specialCardId;
+                    const hasSpecial = !!enemy.userData.specialCardId || (enemy.userData.specialCardIds && enemy.userData.specialCardIds.length > 0);
                     if (hasSpecial && Math.random() < (enemy.userData.specialChance || 0)) {
                         enemy.userData.intent = 'special';
+                        if (enemy.userData.specialCardIds && enemy.userData.specialCardIds.length > 0) {
+                            const ids = enemy.userData.specialCardIds;
+                            enemy.userData.specialCardId = ids[Math.floor(Math.random() * ids.length)];
+                        }
                     } else if (enemy.userData.type === 'boss') {
                         enemy.userData.intent = Math.random() > 0.3 ? 'attack_heavy' : 'defense';
                     } else {
