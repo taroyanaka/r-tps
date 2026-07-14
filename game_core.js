@@ -351,7 +351,23 @@
 
             // Mouse controls
             window.addEventListener('mousedown', (e) => {
+                if (gameState === 'battle') {
+                    if (!e.target.closest || !e.target.closest('#hand-cards')) {
+                        if (e.button === 0) {
+                            if (typeof window.useCardIndex === 'function') window.useCardIndex(0);
+                        } else if (e.button === 2) {
+                            if (typeof window.useCardIndex === 'function') window.useCardIndex(1);
+                        }
+                    }
+                }
                 isMouseDown = true;
+            });
+            window.addEventListener('contextmenu', (e) => {
+                if (gameState === 'battle') {
+                    if (!e.target.closest || !e.target.closest('#hand-cards')) {
+                        e.preventDefault();
+                    }
+                }
             });
 
             window.addEventListener('mouseup', (e) => {
