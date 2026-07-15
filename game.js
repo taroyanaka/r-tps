@@ -1737,7 +1737,7 @@
                             : enemy.position.distanceTo(origin);
                         if (dist <= radius) {
                             const isFront = effect.kind !== 'aoe_front' || (() => {
-                                const forward = new THREE.Vector3(Math.sin(cameraTargetYaw), 0, Math.cos(cameraTargetYaw));
+                                const forward = new THREE.Vector3(Math.sin(playerMesh.rotation.y), 0, Math.cos(playerMesh.rotation.y));
                                 const toEnemy = new THREE.Vector3(enemy.position.x - origin.x, 0, enemy.position.z - origin.z).normalize();
                                 return forward.dot(toEnemy) > 0.25;
                             })();
@@ -1970,7 +1970,7 @@
             mesh.position.y = 0.05;
             mesh.rotation.x = -Math.PI / 2;
             if (kind === 'aoe_front') {
-                mesh.rotation.y = cameraTargetYaw;
+                mesh.rotation.y = playerMesh.rotation.y;
             }
             scene.add(mesh);
 
