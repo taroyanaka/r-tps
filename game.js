@@ -1242,6 +1242,8 @@
                 specialCardId: def.specialCardId,
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel,
+                attackCard: def.attackCard || 'strike',
+                attackIntervalFrames: def.attackIntervalFrames || 180,
                 poison: 0, poisonTimer: 0, vulnerableFrames: 0, weakFrames: 0, slowFrames: 0
             };
 
@@ -1293,7 +1295,9 @@
                 specialCardId: def.specialCardId,
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel,
-                specialCooldown: 180
+                specialCooldown: 180,
+                attackCard: def.attackCard || 'whirlwind',
+                attackIntervalFrames: def.attackIntervalFrames || 240
             };
 
             battleState.enemies.push(group);
@@ -1344,18 +1348,24 @@
             ctx.fillStyle = '#f8fafc';
             ctx.font = 'bold 15px sans-serif';
             ctx.fillText(`${enemy.userData.name}`, 10, 25);
-            ctx.font = '12px sans-serif';
-            ctx.fillStyle = '#cbd5e1';
-            ctx.fillText(`HP: ${Math.ceil(enemy.userData.hp)}/${Math.ceil(enemy.userData.maxHp)}`, 150, 25);
+            // HP Bar instead of text
+            const hpRatio = Math.max(0, enemy.userData.hp / enemy.userData.maxHp);
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(150, 15, 96, 10);
+            ctx.fillStyle = enemy.userData.hp > enemy.userData.maxHp * 0.3 ? '#10b981' : '#ef4444';
+            ctx.fillRect(150, 15, 96 * hpRatio, 10);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(150, 15, 96, 10);
 
             let text = "";
             let color = "#ffffff";
-            if (enemy.userData.intent === 'attack') {
-                text = "Attack prediction (6 DMG)";
-                color = "#f43f5e";
-            } else if (enemy.userData.intent === 'attack_heavy') {
-                text = "Giga beam round (15 DMG)";
-                color = "#ef4444";
+            if (enemy.userData.intent.startsWith('attack')) {
+                const cardDef = CARDS[enemy.userData.attackCard || 'strike'];
+                const cardName = cardDef ? cardDef.name : "Attack";
+                const dmg = cardDef && cardDef.effect ? (cardDef.effect.damageBase || 6) : 6;
+                text = `Attack: ${cardName} (${dmg} DMG)`;
+                color = enemy.userData.intent === 'attack_heavy' ? "#ef4444" : "#f43f5e";
             } else if (enemy.userData.intent === 'defense') {
                 text = "Barrier load (+10 BLOCK)";
                 color = "#3b82f6";
@@ -2061,6 +2071,54 @@
             });
         }
 
+        function executeEnemyAttack(enemy) {
+            const cardId = enemy.userData.attackCard || 'strike';
+            const cardDef = CARDS[cardId];
+            if (cardDef && cardDef.effect) {
+                const effect = cardDef.effect;
+                const kind = effect.kind;
+                const dmg = effect.damageBase || 5;
+                if (kind === 'aoe_radial' || kind === 'aoe_front') {
+                    const radius = effect.radius || 4;
+                    spawnAoEAttackVFX(kind, enemy.position, radius, effect.colorHex || 0xef4444);
+                    const dist = kind === 'aoe_front' 
+                        ? new THREE.Vector3(playerMesh.position.x - enemy.position.x, 0, playerMesh.position.z - enemy.position.z).length()
+                        : playerMesh.position.distanceTo(enemy.position);
+                    if (dist <= radius) {
+                        const isFront = kind !== 'aoe_front' || (() => {
+                            const forward = new THREE.Vector3(Math.sin(enemy.rotation.y), 0, Math.cos(enemy.rotation.y));
+                            const toPlayer = new THREE.Vector3(playerMesh.position.x - enemy.position.x, 0, playerMesh.position.z - enemy.position.z).normalize();
+                            return forward.dot(toPlayer) > 0.25;
+                        })();
+                        if (isFront) {
+                            damagePlayer(dmg);
+                            spawnHitSpark(playerMesh.position, effect.colorHex || 0xef4444);
+                        }
+                    }
+                } else if (kind === 'burst_bullets') {
+                    const count = effect.count || 1;
+                    for (let i = 0; i < count; i++) {
+                        setTimeout(() => {
+                            if (gameState !== 'battle') return;
+                            fireEnemyBullet(enemy, dmg);
+                        }, i * (effect.stepMs || 150));
+                    }
+                } else if (kind === 'spread_burst') {
+                    const count = effect.count || 1;
+                    for (let i = 0; i < count; i++) {
+                        setTimeout(() => {
+                            if (gameState !== 'battle') return;
+                            fireEnemyBullet(enemy, dmg);
+                        }, i * 50);
+                    }
+                } else {
+                    fireEnemyBullet(enemy, dmg);
+                }
+            } else {
+                fireEnemyBullet(enemy, 6);
+            }
+        }
+
         // --- UI rendering ---
         function renderHandUI() {
             const container = document.getElementById('hand-cards');
@@ -2615,15 +2673,13 @@
 
                 enemy.userData.shootCooldown--;
                 if (enemy.userData.shootCooldown <= 0) {
-                    if (enemy.userData.intent === 'attack') {
-                        fireEnemyBullet(enemy, 6);
-                        enemy.userData.shootCooldown = 150 + Math.random() * 60;
-                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} chose attack (cooldown=${enemy.userData.shootCooldown.toFixed(0)})`);
-                    } 
-                    else if (enemy.userData.intent === 'attack_heavy') {
-                        fireEnemyBullet(enemy, 15);
-                        enemy.userData.shootCooldown = 100;
-                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} chose heavy attack (cooldown=${enemy.userData.shootCooldown.toFixed(0)})`);
+                    if (enemy.userData.intent === 'attack' || enemy.userData.intent === 'attack_heavy') {
+                        executeEnemyAttack(enemy);
+                        enemy.userData.shootCooldown = enemy.userData.attackIntervalFrames || (150 + Math.random() * 60);
+                        if (enemy.userData.intent === 'attack_heavy') {
+                            enemy.userData.shootCooldown = Math.floor(enemy.userData.shootCooldown * 0.8);
+                        }
+                        console.log(`[DEBUG-ENEMY-ACTION] ${enemy.userData.name} executed attack (cooldown=${enemy.userData.shootCooldown.toFixed(0)})`);
                     }
                     else if (enemy.userData.intent === 'defense') {
                         playSFX('shield');
