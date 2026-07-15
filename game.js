@@ -339,11 +339,11 @@
                 if (gameState === 'battle') {
                     const key = e.key.toLowerCase();
                     if (key === 'i') useCardIndex(0);
-                    if (key === 'k') useCardIndex(1);
+                    if (key === 'k' || key === ' ' || key === 'space') useCardIndex(1);
                     if (key === 'r') {
                         if (typeof window.redrawHand === 'function') window.redrawHand();
                     }
-                    if (key === 'j' || key === 'l' || key === 'i' || key === 'k' || key === 'r') {
+                    if (key === 'j' || key === 'l' || key === 'i' || key === 'k' || key === ' ' || key === 'space' || key === 'r') {
                         e.preventDefault();
                     }
                 }
@@ -1175,7 +1175,13 @@
                 return;
             }
 
-            numEnemies = Math.max(1, Math.round(numEnemies * PARAMS.enemyCountMult));
+            numEnemies = Math.max(1, Math.round(numEnemies * PARAMS.enemyCountMult * 3));
+            battleState.totalWaveEnemies = numEnemies;
+            battleState.currentWave = 1;
+            battleState.maxWaves = PARAMS.waveCount || 4;
+            battleState.enemiesPerWave = Math.ceil(numEnemies / battleState.maxWaves);
+            numEnemies = Math.min(numEnemies, battleState.enemiesPerWave);
+            battleState.remainingWaveEnemiesToSpawn = battleState.totalWaveEnemies - numEnemies;
             debugState('[DEBUG-SPAWN-PLAN]', `node=${selectedNode ? selectedNode.type : 'none'} enemies=${numEnemies} hpFactor=${hpFactor.toFixed(2)} speedFactor=${speedFactor.toFixed(2)}`);
 
             for (let i = 0; i < numEnemies; i++) {
@@ -1193,6 +1199,33 @@
             createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
         }
         }
+
+        
+        window.spawnNextWave = function() {
+            if (!battleState.remainingWaveEnemiesToSpawn || battleState.remainingWaveEnemiesToSpawn <= 0) return;
+            let numEnemies = Math.min(battleState.remainingWaveEnemiesToSpawn, battleState.enemiesPerWave);
+            battleState.remainingWaveEnemiesToSpawn -= numEnemies;
+            battleState.currentWave++;
+            showToast(`Wave ${battleState.currentWave} / ${battleState.maxWaves}`);
+            
+            let hpFactor = 1.0;
+            let speedFactor = 1.0;
+            if (battleState.selectedNode && battleState.selectedNode.type === 'elite') {
+                hpFactor = 1.8;
+                speedFactor = 1.1;
+            }
+            
+            for (let i = 0; i < numEnemies; i++) {
+                const angle = (i / numEnemies) * Math.PI * 2 + Math.random();
+                let dist = 10 + Math.random() * 5; 
+                const x = Math.cos(angle) * dist;
+                const z = Math.sin(angle) * dist;
+
+                const availableEnemies = Object.keys(window.RTPS_ENEMY_DEFS).filter(k => window.RTPS_ENEMY_DEFS[k].type !== 'boss' && window.RTPS_ENEMY_DEFS[k].type !== 'elite');
+                const enemyType = availableEnemies.length > 0 ? availableEnemies[Math.floor(Math.random() * availableEnemies.length)] : 'glitch';
+                createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
+            }
+        };
 
         function createEnemy3D(x, z, type, hpFactor = 1.0, speedFactor = 1.0) {
             const group = new THREE.Group();
@@ -1242,8 +1275,9 @@
                 specialCardId: def.specialCardId,
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel,
-                attackCard: def.attackCard || 'strike',
-                attackIntervalFrames: def.attackIntervalFrames || 180,
+                attackCard: def.attackCard || "strike",
+                specialCardIds: def.specialCardIds,
+                attackIntervalFrames: (def.attackIntervalFrames || 180) / ((window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0].bossAttackFrequencyMultiplier) || 1),
                 poison: 0, poisonTimer: 0, vulnerableFrames: 0, weakFrames: 0, slowFrames: 0
             };
 
@@ -1296,8 +1330,9 @@
                 specialChance: def.specialChance || 0,
                 specialLabel: def.specialLabel,
                 specialCooldown: 180,
-                attackCard: def.attackCard || 'whirlwind',
-                attackIntervalFrames: def.attackIntervalFrames || 240
+                attackCard: def.attackCard || "whirlwind",
+                specialCardIds: def.specialCardIds,
+                attackIntervalFrames: (def.attackIntervalFrames || 240) / ((window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0].bossAttackFrequencyMultiplier) || 1),
             };
 
             battleState.enemies.push(group);
@@ -1361,7 +1396,11 @@
             let text = "";
             let color = "#ffffff";
             if (enemy.userData.intent.startsWith('attack')) {
-                const cardDef = CARDS[enemy.userData.attackCard || 'strike'];
+                let cardId = enemy.userData.attackCard || 'strike';
+            if (enemy.userData.type === 'boss' && enemy.userData.specialCardIds && enemy.userData.specialCardIds.length > 0) {
+                cardId = enemy.userData.specialCardIds[Math.floor(Math.random() * enemy.userData.specialCardIds.length)];
+            }
+                const cardDef = CARDS[cardId];
                 const cardName = cardDef ? cardDef.name : "Attack";
                 const dmg = cardDef && cardDef.effect ? (cardDef.effect.damageBase || 6) : 6;
                 text = `Attack: ${cardName} (${dmg} DMG)`;
@@ -1735,7 +1774,7 @@
                     player.speedMult += effectValue || 0.2;
                     showToast("Movement speed increased!");
                     return true;
-                case 'aoe_front':
+                
                 case 'aoe_radial':
                 case 'aoe_burst_burn':
                 case 'aoe_low_cost':
@@ -2072,7 +2111,13 @@
         }
 
         function executeEnemyAttack(enemy) {
-            const cardId = enemy.userData.attackCard || 'strike';
+            let cardId = enemy.userData.attackCard || 'strike';
+            if (enemy.userData.type === 'boss' && enemy.userData.specialCardIds && enemy.userData.specialCardIds.length > 0) {
+                cardId = enemy.userData.specialCardIds[Math.floor(Math.random() * enemy.userData.specialCardIds.length)];
+            }
+            if (enemy.userData.type === 'boss' && enemy.userData.specialCardIds && enemy.userData.specialCardIds.length > 0) {
+                cardId = enemy.userData.specialCardIds[Math.floor(Math.random() * enemy.userData.specialCardIds.length)];
+            }
             const cardDef = CARDS[cardId];
             if (cardDef && cardDef.effect) {
                 const effect = cardDef.effect;
@@ -2879,3 +2924,27 @@
             [{ type: 'camp', label: 'Final Optimization Node', desc: 'Prepare for the final defense' }],
             [{ type: 'boss', label: 'Mainframe Core (BOSS)', desc: 'Origin point of total motherboard lockdown' }]
         ];
+
+    window.addEventListener('keydown', (e) => {
+        if (typeof gameState !== 'undefined' && gameState !== 'battle' && gameState !== 'start') {
+            const focusables = Array.from(document.querySelectorAll('button:not([disabled]), [tabindex="0"], select'));
+            if (focusables.length === 0) return;
+            
+            const active = document.activeElement;
+            let idx = focusables.indexOf(active);
+            
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                idx = (idx + 1) % focusables.length;
+                focusables[idx].focus();
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                idx = (idx - 1 + focusables.length) % focusables.length;
+                focusables[idx].focus();
+            } else if (e.key === 'Enter') {
+                if (active && active.click) {
+                    active.click();
+                }
+            }
+        }
+    });
