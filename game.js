@@ -1161,7 +1161,7 @@
         }
 
         function spawnEnemiesForStage() {
-            let numEnemies = 2;
+            let numEnemies = Math.floor(Math.random() * 3) + 1; // Random 1 to 3 enemies for normal nodes
             let speedFactor = 1.0;
             let hpFactor = 1.0;
 
@@ -1188,8 +1188,8 @@
                 const x = Math.cos(angle) * dist;
                 const z = Math.sin(angle) * dist;
 
-            const enemyRoll = Math.random();
-            const enemyType = enemyRoll < 0.18 ? 'scout' : (enemyRoll < 0.59 ? 'glitch' : 'sentinel');
+            const availableEnemies = Object.keys(ENEMY_DEFS).filter(k => ENEMY_DEFS[k].type !== 'boss' && ENEMY_DEFS[k].type !== 'elite');
+            const enemyType = availableEnemies.length > 0 ? availableEnemies[Math.floor(Math.random() * availableEnemies.length)] : 'glitch';
             createEnemy3D(x, z, enemyType, hpFactor, speedFactor);
         }
         }
@@ -1441,7 +1441,7 @@
             }
         }
 
-        function drawCard() {
+        function drawCard(insertIndex = -1) {
             if (battleState.hand.length >= 2) return false;
             if (battleState.drawLockFrames > 0) return false;
 
@@ -1456,7 +1456,11 @@
             }
 
             const card = battleState.drawPile.pop();
-            battleState.hand.push(card);
+            if (insertIndex >= 0 && insertIndex <= battleState.hand.length) {
+                battleState.hand.splice(insertIndex, 0, card);
+            } else {
+                battleState.hand.push(card);
+            }
             playSFX('draw');
             console.log(`[DEBUG-DECK] Card drawn: ${card.name} (Draw pile remaining: ${battleState.drawPile.length} cards)`);
             debugState('[DEBUG-DECK-DRAW]', `card=${card.name} upgraded=${!!card.upgraded}`);
@@ -1501,7 +1505,7 @@
             }
 
             while (battleState.hand.length < 2) {
-                if (!drawCard()) break;
+                if (!drawCard(index)) break;
             }
 
             renderHandUI();
@@ -2140,6 +2144,23 @@
             document.getElementById('draw-pile-count').textContent = battleState.drawPile.length;
             document.getElementById('discard-pile-count').textContent = battleState.discardPile.length;
             updateTopBarUI();
+            
+            const handContainer = document.getElementById('hand-cards');
+            if (handContainer && battleState.hand) {
+                const cardDivs = handContainer.children;
+                battleState.hand.forEach((card, idx) => {
+                    if (cardDivs[idx]) {
+                        const isAffordable = !isNaN(player.energy) && player.energy >= card.cost;
+                        if (isAffordable) {
+                            cardDivs[idx].classList.remove('opacity-50');
+                            cardDivs[idx].classList.add('opacity-100');
+                        } else {
+                            cardDivs[idx].classList.remove('opacity-100');
+                            cardDivs[idx].classList.add('opacity-50');
+                        }
+                    }
+                });
+            }
         }
 
         let toastEl = document.getElementById('toast');
