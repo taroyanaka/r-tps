@@ -339,11 +339,11 @@
                 if (gameState === 'battle') {
                     const key = e.key.toLowerCase();
                     if (key === 'i') useCardIndex(0);
-                    if (key === 'k' || key === ' ' || key === 'space') useCardIndex(1);
+                    if (key === ' ') useCardIndex(1);
                     if (key === 'r') {
                         if (typeof window.redrawHand === 'function') window.redrawHand();
                     }
-                    if (key === 'j' || key === 'l' || key === 'i' || key === 'k' || key === ' ' || key === 'space' || key === 'r') {
+                    if (key === 'j' || key === 'l' || key === 'i' || key === ' ' || key === 'r') {
                         e.preventDefault();
                     }
                 }
@@ -444,10 +444,12 @@
 
         function addTempDamageBuff(amount, durationFrames, source = 'temp') {
             if (!amount) return;
+            const _buffLife = Math.max(1, durationFrames || 180);
             battleState.tempDamageBuffs.push({
                 amount,
                 source,
-                life: Math.max(1, durationFrames || 180)
+                life: _buffLife,
+                maxLife: _buffLife
             });
             spawnBuffVFX();
         }
@@ -1054,8 +1056,9 @@
                     if (upgradedCard) Object.assign(card, upgradedCard);
                 }
 
-                const cardDiv = document.createElement('div');
-                cardDiv.className = `p-4 rounded-2xl border ${card.colorClass} hover:scale-105 active:scale-95 transition-all cursor-pointer flex flex-col justify-between w-full md:w-48 h-64 text-left relative overflow-hidden group`;
+                const cardDiv = document.createElement('button');
+                cardDiv.className = `p-4 rounded-2xl border ${card.colorClass} hover:scale-105 active:scale-95 focus:scale-105 focus:ring-2 focus:ring-white/50 transition-all cursor-pointer flex flex-col justify-between w-full md:w-48 h-64 text-left relative overflow-hidden group`;
+                cardDiv.setAttribute('tabindex', '0');
                 cardDiv.onclick = () => selectRewardCard(card);
                 const attackGraphicInfo = getAttackGraphicInfo(card);
 
@@ -1206,7 +1209,24 @@
             let numEnemies = Math.min(battleState.remainingWaveEnemiesToSpawn, battleState.enemiesPerWave);
             battleState.remainingWaveEnemiesToSpawn -= numEnemies;
             battleState.currentWave++;
-            showToast(`Wave ${battleState.currentWave} / ${battleState.maxWaves}`);
+            showToast(`Wave ${battleState.currentWave} / ${battleState.maxWaves}`);
+            // Show wave notice overlay
+            (function() {
+                const wn = document.getElementById('wave-notice');
+                const wnText = document.getElementById('wave-notice-text');
+                const wnSub = document.getElementById('wave-notice-sub');
+                if (wn) {
+                    if (wnText) wnText.textContent = `WAVE ${battleState.currentWave} / ${battleState.maxWaves}`;
+                    if (wnSub) wnSub.textContent = battleState.currentWave === battleState.maxWaves ? 'FINAL WAVE' : 'INCOMING';
+                    wn.classList.remove('hidden');
+                    wn.style.opacity = '1';
+                    wn.style.transition = 'opacity 0.4s';
+                    setTimeout(() => {
+                        wn.style.opacity = '0';
+                        setTimeout(() => wn.classList.add('hidden'), 400);
+                    }, 2000);
+                }
+            })();
             
             let hpFactor = 1.0;
             let speedFactor = 1.0;
@@ -2264,6 +2284,42 @@
                     }
                 });
             }
+
+            // --- Buff duration UI ---
+            const buffContainer = document.getElementById('buff-container');
+            if (buffContainer) {
+                const buffLines = [];
+                (battleState.tempDamageBuffs || []).forEach(b => {
+                    const secs = (b.life / 60).toFixed(1);
+                    const pct = Math.min(100, (b.life / (b.maxLife || b.life)) * 100);
+                    buffLines.push({ label: `DMG +${(b.amount * 100).toFixed(0)}%`, secs, pct, color: 'bg-amber-400' });
+                });
+                (battleState.energyRegenBuffs || []).forEach(b => {
+                    const secs = (b.life / 60).toFixed(1);
+                    const pct = Math.min(100, (b.life / (b.maxLife || b.life)) * 100);
+                    buffLines.push({ label: `ENA Regen+`, secs, pct, color: 'bg-cyan-400' });
+                });
+                if (battleState.pendingRetaliation && battleState.pendingRetaliation.life > 0) {
+                    const b = battleState.pendingRetaliation;
+                    buffLines.push({ label: 'Retaliation', secs: (b.life / 60).toFixed(1), pct: 100, color: 'bg-rose-400' });
+                }
+                if (battleState.onHitShieldGain && battleState.onHitShieldGain.life > 0) {
+                    const b = battleState.onHitShieldGain;
+                    buffLines.push({ label: 'On-Hit Shield', secs: (b.life / 60).toFixed(1), pct: 100, color: 'bg-emerald-400' });
+                }
+                if (buffLines.length === 0) {
+                    buffContainer.innerHTML = '';
+                } else {
+                    buffContainer.innerHTML = buffLines.map(bl => `
+                        <div class="flex items-center gap-2 bg-slate-950/80 border border-white/10 px-2 py-0.5 rounded-lg" style="min-width:150px;max-width:200px">
+                            <span class="text-[9px] text-gray-300 font-mono truncate flex-1">${bl.label}</span>
+                            <div class="w-16 h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10">
+                                <div class="h-full ${bl.color} rounded-full transition-all" style="width:${bl.pct}%"></div>
+                            </div>
+                            <span class="text-[9px] font-mono text-gray-400">${bl.secs}s</span>
+                        </div>`).join('');
+                }
+            }
         }
 
         let toastEl = document.getElementById('toast');
@@ -2430,8 +2486,16 @@
             }
 
             // Clamp the player position to the arena bounds
-            playerMesh.position.x = Math.max(-48, Math.min(48, playerMesh.position.x));
-            playerMesh.position.z = Math.max(-48, Math.min(48, playerMesh.position.z));
+            // Circular arena boundary
+            {
+                const _radius = (window.PARAMS && window.PARAMS.arenaRadius) || (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].arenaRadius) || 60;
+                const _dist = Math.hypot(playerMesh.position.x, playerMesh.position.z);
+                if (_dist > _radius) {
+                    const _scale = _radius / _dist;
+                    playerMesh.position.x *= _scale;
+                    playerMesh.position.z *= _scale;
+                }
+            }
 
             // Camera follow
             const camDist = 7.5;
@@ -2538,8 +2602,12 @@
 
             // --- 2. Energy regeneration over time ---
             if (player.energy < player.maxEnergy) {
-                const bonusRegen = battleState.energyRegenBuffs.reduce((sum, buff) => sum + (buff.amount || 0), 0);
-                player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame + bonusRegen);
+                const _isMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'];
+                const _noEnaOnMove = window.RTPS_NO_ENA_RECOVERY_ON_MOVE && !isAutoMode;
+                if (!(_isMoving && _noEnaOnMove)) {
+                    const bonusRegen = battleState.energyRegenBuffs.reduce((sum, buff) => sum + (buff.amount || 0), 0);
+                    player.energy = Math.min(player.maxEnergy, player.energy + PARAMS.energyRecoveryPerFrame + bonusRegen);
+                }
                 updateBattleStatsUI();
             }
 
@@ -2926,7 +2994,7 @@
         ];
 
     window.addEventListener('keydown', (e) => {
-        if (typeof gameState !== 'undefined' && gameState !== 'battle' && gameState !== 'start') {
+        if (typeof gameState !== 'undefined' && gameState !== 'battle') {
             const focusables = Array.from(document.querySelectorAll('button:not([disabled]), [tabindex="0"], select'));
             if (focusables.length === 0) return;
             

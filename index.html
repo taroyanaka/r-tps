@@ -170,9 +170,12 @@
     </div>
     <div class="flex justify-center items-center gap-3 w-full max-w-3xl pointer-events-auto h-36" id="hand-cards">
     </div>
+    <div class="flex flex-wrap justify-center gap-1 mt-1 px-4 pointer-events-none" id="buff-container">
+      <!-- Buff bars injected by JS -->
+    </div>
     <div class="text-[10px] text-gray-500 mt-2 tracking-widest uppercase flex items-center gap-2">
      <span>
-      Left click: left card / Right click: right card / [1] [2] [3] [4] keys to use cards
+      Left click / [I] key: left card &nbsp;|&nbsp; Right click / [Space] key: right card
      </span>
      <span class="text-slate-700">
       |
@@ -262,6 +265,14 @@
        Help / Manual
       </button>
       <div class="w-full border-t border-slate-800 pt-3 mt-1">
+       <!-- ENA on move toggle -->
+       <div class="flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-4 py-2.5 mb-3">
+        <span class="text-xs text-gray-300 font-bold tracking-wide">移動中 ENA 回復停止</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+         <input type="checkbox" id="no-ena-on-move-toggle" class="sr-only peer" onchange="window.RTPS_NO_ENA_RECOVERY_ON_MOVE = this.checked;">
+         <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+        </label>
+       </div>
        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-mono">
         embedded regulation data
        </p>
@@ -508,6 +519,14 @@
      </p>
     </div>
    </div>
+  </div>
+
+  <!-- Wave start notification -->
+  <div class="hidden fixed inset-0 z-[90] flex flex-col items-center justify-center pointer-events-none" id="wave-notice">
+    <div class="text-center">
+      <div class="text-4xl font-black tracking-[0.3em] uppercase text-cyan-300 wave-notice-text" id="wave-notice-text" style="text-shadow:0 0 40px rgba(6,182,212,0.9),0 0 80px rgba(6,182,212,0.5);">WAVE 1</div>
+      <div class="text-lg font-bold tracking-widest uppercase text-cyan-500 mt-2" id="wave-notice-sub" style="text-shadow:0 0 20px rgba(6,182,212,0.7);">INCOMING</div>
+    </div>
   </div>
   <script src="audio.js">
   </script>
