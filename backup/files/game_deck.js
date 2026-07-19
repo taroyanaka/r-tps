@@ -168,7 +168,7 @@
 
         window.redrawHand = function() {
             if (gameState !== 'battle') return;
-            const cost = PARAMS.redrawCost || 1;
+            const cost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].redrawCost) || 1;
             if (player.energy < cost) {
                 showToast("Not enough energy to redraw!");
                 return;

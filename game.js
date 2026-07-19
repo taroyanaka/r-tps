@@ -5,20 +5,16 @@
         const _autoStart = _urlParams.get('mode') === 'auto';
 
         // Default values synced with the first regulation row.
-        const PARAMS = {
-            paramName: 'default',
-            playerHp: 80,
-            playerMaxHp: 80,
-            playerEnergy: 10.0,
-            playerMaxEnergy: 10,
-            playerGold: 99,
-            energyRecoveryPerFrame: 0.006,
-            energyRecoveryOnHit: 0.15,
-            autoModeSpeedMult: 10,
-            enemyCountMult: 1.0,
-            enemyHpMult: 1.0,
-            enemyDamageMult: 1.0
-        };
+        const defaultParamConfig = (Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST.find(cfg => cfg && cfg.paramName === 'default') : null)
+            || (Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST[0] : null)
+            || {};
+        const PARAMS = {};
+        Object.keys(defaultParamConfig).forEach((key) => {
+            const raw = defaultParamConfig[key];
+            PARAMS[key] = isNaN(raw) ? raw : Number(raw);
+        });
+        PARAMS.paramName = PARAMS.paramName || 'default';
+        window.PARAMS = PARAMS;
 
         let CARD_DATA = null;
         let CARDS = {};
@@ -30,26 +26,37 @@
         const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
 
         async function loadParams() {
-            if (!_paramName) {
-                return;
-            }
-
             try {
-                const configs = Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST : [];
-                const config = configs.find(c => c.paramName === _paramName);
-                if (config) {
-                    for (const key in config) {
-                        if (PARAMS.hasOwnProperty(key)) {
-                            const raw = config[key];
-                            PARAMS[key] = isNaN(raw) ? raw : Number(raw);
+                if (_paramName) {
+                    const configs = Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST : [];
+                    const config = configs.find(c => c.paramName === _paramName);
+                    if (config) {
+                        for (const key in config) {
+                            if (PARAMS.hasOwnProperty(key)) {
+                                const raw = config[key];
+                                PARAMS[key] = isNaN(raw) ? raw : Number(raw);
+                            }
                         }
+                        console.log(`[PARAM] Applied regulation set: ${_paramName}`);
+                    } else {
+                        console.log(`[PARAM] Settings not found: ${_paramName}`);
                     }
-                    console.log(`[PARAM] Applied regulation set: ${_paramName}`);
-                } else {
-                    console.log(`[PARAM] Settings not found: ${_paramName}`);
                 }
             } catch(e) {
                 console.log(`[PARAM] Parameter load error: ${e}`);
+            }
+
+            try {
+                const customValues = (typeof window._getStoredCustomParamValues === 'function' ? window._getStoredCustomParamValues() : null) || window.RTPS_CUSTOM_PARAM_OVERRIDES || null;
+                if (customValues && typeof customValues === 'object') {
+                    Object.entries(customValues).forEach(([key, value]) => {
+                        if (PARAMS.hasOwnProperty(key)) {
+                            PARAMS[key] = Number(value);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log(`[PARAM] Custom parameter load error: ${e}`);
             }
         }
 
@@ -836,7 +843,7 @@
             container.innerHTML = '';
             
             // Add Reroll UI
-            const rerollCost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
+            const rerollCost = PARAMS.shopRerollCost || 1;
             const rerollContainer = panelElement.querySelector('#shop-reroll-container');
             if (rerollContainer) {
                 rerollContainer.innerHTML = `
@@ -846,7 +853,7 @@
                 `;
             }
 
-            const shopSlots = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopSlotCount) || 8;
+            const shopSlots = PARAMS.shopSlotCount || 8;
             const shopPool = [];
             for (let i = 0; i < shopSlots - 1; i++) {
                 shopPool.push({ card: pickRandomCardFromPool('shop', 0.2), cost: 80 + Math.floor(Math.random() * 40) });
@@ -924,7 +931,7 @@
         }
 
         window.rerollShop = function() {
-            const cost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
+            const cost = PARAMS.shopRerollCost || 1;
             if (player.gold >= cost) {
                 player.gold -= cost;
                 playSFX('shield'); 
@@ -1038,7 +1045,7 @@
             container.innerHTML = '';
 
             const cardPool = REWARD_POOL.length > 0 ? REWARD_POOL : getPoolForType('reward');
-            const rewardCardCount = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].rewardCardCount) || 3;
+            const rewardCardCount = PARAMS.rewardCardCount || 3;
             const selected = [];
             while (selected.length < rewardCardCount) {
                 const rId = pickWeightedCardId('reward') || cardPool[Math.floor(Math.random() * cardPool.length)];
@@ -1209,23 +1216,40 @@
             let numEnemies = Math.min(battleState.remainingWaveEnemiesToSpawn, battleState.enemiesPerWave);
             battleState.remainingWaveEnemiesToSpawn -= numEnemies;
             battleState.currentWave++;
-            showToast(`Wave ${battleState.currentWave} / ${battleState.maxWaves}`);
-            // Show wave notice overlay
-            (function() {
-                const wn = document.getElementById('wave-notice');
-                const wnText = document.getElementById('wave-notice-text');
-                const wnSub = document.getElementById('wave-notice-sub');
-                if (wn) {
-                    if (wnText) wnText.textContent = `WAVE ${battleState.currentWave} / ${battleState.maxWaves}`;
-                    if (wnSub) wnSub.textContent = battleState.currentWave === battleState.maxWaves ? 'FINAL WAVE' : 'INCOMING';
-                    wn.classList.remove('hidden');
-                    wn.style.opacity = '1';
-                    wn.style.transition = 'opacity 0.4s';
-                    setTimeout(() => {
-                        wn.style.opacity = '0';
-                        setTimeout(() => wn.classList.add('hidden'), 400);
-                    }, 2000);
-                }
+            showToast(`Wave ${battleState.currentWave} / ${battleState.maxWaves}`);
+
+            // Show wave notice overlay
+
+            (function() {
+
+                const wn = document.getElementById('wave-notice');
+
+                const wnText = document.getElementById('wave-notice-text');
+
+                const wnSub = document.getElementById('wave-notice-sub');
+
+                if (wn) {
+
+                    if (wnText) wnText.textContent = `WAVE ${battleState.currentWave} / ${battleState.maxWaves}`;
+
+                    if (wnSub) wnSub.textContent = battleState.currentWave === battleState.maxWaves ? 'FINAL WAVE' : 'INCOMING';
+
+                    wn.classList.remove('hidden');
+
+                    wn.style.opacity = '1';
+
+                    wn.style.transition = 'opacity 0.4s';
+
+                    setTimeout(() => {
+
+                        wn.style.opacity = '0';
+
+                        setTimeout(() => wn.classList.add('hidden'), 400);
+
+                    }, 2000);
+
+                }
+
             })();
             
             let hpFactor = 1.0;
@@ -1297,7 +1321,7 @@
                 specialLabel: def.specialLabel,
                 attackCard: def.attackCard || "strike",
                 specialCardIds: def.specialCardIds,
-                attackIntervalFrames: (def.attackIntervalFrames || 180) / ((window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0].bossAttackFrequencyMultiplier) || 1),
+                attackIntervalFrames: (def.attackIntervalFrames || 180) / (PARAMS.bossAttackFrequencyMultiplier || 1),
                 poison: 0, poisonTimer: 0, vulnerableFrames: 0, weakFrames: 0, slowFrames: 0
             };
 
@@ -1352,7 +1376,7 @@
                 specialCooldown: 180,
                 attackCard: def.attackCard || "whirlwind",
                 specialCardIds: def.specialCardIds,
-                attackIntervalFrames: (def.attackIntervalFrames || 240) / ((window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0].bossAttackFrequencyMultiplier) || 1),
+                attackIntervalFrames: (def.attackIntervalFrames || 240) / (PARAMS.bossAttackFrequencyMultiplier || 1),
             };
 
             battleState.enemies.push(group);
@@ -1583,7 +1607,7 @@
 
         window.redrawHand = function() {
             if (gameState !== 'battle') return;
-            const cost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].redrawCost) || 1;
+            const cost = PARAMS.redrawCost || 1;
             if (isNaN(player.energy) || player.energy < cost) {
                 showToast("Not enough energy to redraw!");
                 return;
@@ -2488,7 +2512,7 @@
             // Clamp the player position to the arena bounds
             // Circular arena boundary
             {
-                const _radius = (window.PARAMS && window.PARAMS.arenaRadius) || (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].arenaRadius) || 60;
+                const _radius = (window.PARAMS && window.PARAMS.arenaRadius) || PARAMS.arenaRadius || 60;
                 const _dist = Math.hypot(playerMesh.position.x, playerMesh.position.z);
                 if (_dist > _radius) {
                     const _scale = _radius / _dist;
@@ -2589,9 +2613,9 @@
 
             // Enemy time scaling
             battleState.framesElapsed = (battleState.framesElapsed || 0) + 1;
-            const powerUpInterval = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].enemyPowerUpInterval) || 600;
+            const powerUpInterval = PARAMS.enemyPowerUpInterval || 600;
             if (battleState.framesElapsed % powerUpInterval === 0) {
-                const amt = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].enemyPowerUpAmount) || 1.1;
+                const amt = PARAMS.enemyPowerUpAmount || 1.1;
                 battleState.enemies.forEach(enemy => {
                     if (!enemy.userData.damageMult) enemy.userData.damageMult = 1.0;
                     enemy.userData.damageMult *= amt;

@@ -209,7 +209,7 @@
             container.innerHTML = '';
             
             // Add Reroll UI
-            const rerollCost = PARAMS.shopRerollCost || 1;
+            const rerollCost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
             const rerollDiv = document.createElement('div');
             rerollDiv.className = "mb-4 text-center";
             rerollDiv.innerHTML = `
@@ -219,7 +219,7 @@
             `;
             container.appendChild(rerollDiv);
 
-            const shopSlots = PARAMS.shopSlotCount || 8;
+            const shopSlots = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopSlotCount) || 8;
             const shopPool = [];
             for (let i = 0; i < shopSlots - 1; i++) {
                 shopPool.push({ card: pickRandomCardFromPool('shop', 0.2), cost: 80 + Math.floor(Math.random() * 40) });
@@ -297,7 +297,7 @@
         }
 
         window.rerollShop = function() {
-            const cost = PARAMS.shopRerollCost || 1;
+            const cost = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].shopRerollCost) || 1;
             if (player.gold >= cost) {
                 player.gold -= cost;
                 playSFX('shield'); 

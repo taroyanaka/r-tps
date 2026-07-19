@@ -672,9 +672,9 @@
 
                         // Enemy time scaling
             battleState.framesElapsed = (battleState.framesElapsed || 0) + 1;
-            const powerUpInterval = PARAMS.enemyPowerUpInterval || 600;
+            const powerUpInterval = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].enemyPowerUpInterval) || 600;
             if (battleState.framesElapsed % powerUpInterval === 0) {
-                const amt = PARAMS.enemyPowerUpAmount || 1.1;
+                const amt = (window.RTPS_PARAM_LIST && window.RTPS_PARAM_LIST[0] && window.RTPS_PARAM_LIST[0].enemyPowerUpAmount) || 1.1;
                 battleState.enemies.forEach(enemy => {
                     if (!enemy.userData.damageMult) enemy.userData.damageMult = 1.0;
                     enemy.userData.damageMult *= amt;

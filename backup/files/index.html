@@ -284,23 +284,6 @@
          Loading...
         </p>
        </div>
-       <div class="w-full border-t border-slate-800/80 pt-3 mt-1">
-        <div class="flex items-center justify-between mb-2.5 gap-2">
-         <div>
-          <p class="text-[10px] text-cyan-400 uppercase tracking-[0.24em] font-bold">
-           Custom Parameters
-          </p>
-          <p class="text-[9px] text-slate-500 mt-0.5">
-           Saved automatically in this browser
-          </p>
-         </div>
-         <button class="text-[10px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-lg transition-all" onclick="window.resetCustomParamOverrides && window.resetCustomParamOverrides()">
-          Reset
-         </button>
-        </div>
-        <div class="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1.5 pb-1 hide-scrollbar" id="custom-param-list">
-        </div>
-       </div>
       </div>
      </div>
     </div>
@@ -350,103 +333,6 @@
                 const configs = window.RTPS_PARAM_LIST || [];
                 render(configs);
             };
-
-            window._getDefaultCustomParamValues = function() {
-                const configs = Array.isArray(window.RTPS_PARAM_LIST) ? window.RTPS_PARAM_LIST : [];
-                const source = configs.find(cfg => cfg && cfg.paramName === 'default') || configs[0] || {};
-                return Object.keys(source).reduce((acc, key) => {
-                    if (key === 'paramName') return acc;
-                    const value = source[key];
-                    if (typeof value !== 'number' || Number.isNaN(value)) return acc;
-                    acc[key] = Number(value);
-                    return acc;
-                }, {});
-            };
-
-            window._getStoredCustomParamValues = function() {
-                try {
-                    const raw = localStorage.getItem('rtps_custom_param_overrides');
-                    if (!raw) return null;
-                    const parsed = JSON.parse(raw);
-                    return parsed && typeof parsed === 'object' ? parsed : null;
-                } catch (e) {
-                    return null;
-                }
-            };
-
-            window._saveCustomParamValues = function(values) {
-                try {
-                    localStorage.setItem('rtps_custom_param_overrides', JSON.stringify(values));
-                } catch (e) {}
-                window.RTPS_CUSTOM_PARAM_OVERRIDES = values;
-            };
-
-            window._applyCustomParamOverridesToGame = function(values) {
-                if (!values || typeof values !== 'object') return values;
-                if (window.PARAMS && typeof window.PARAMS === 'object') {
-                    Object.entries(values).forEach(([key, value]) => {
-                        if (Object.prototype.hasOwnProperty.call(window.PARAMS, key)) {
-                            window.PARAMS[key] = Number(value);
-                        }
-                    });
-                }
-                window.RTPS_CUSTOM_PARAM_OVERRIDES = values;
-                return values;
-            };
-
-            window.resetCustomParamOverrides = function() {
-                const defaults = window._getDefaultCustomParamValues();
-                window._saveCustomParamValues(defaults);
-                window.renderCustomParamSettings();
-                return defaults;
-            };
-
-            window.renderCustomParamSettings = function() {
-                const container = document.getElementById('custom-param-list');
-                if (!container) return;
-
-                const defaults = window._getDefaultCustomParamValues();
-                const stored = window._getStoredCustomParamValues();
-                const values = { ...defaults, ...(stored || {}) };
-
-                window._applyCustomParamOverridesToGame(values);
-                container.innerHTML = '';
-
-                Object.entries(defaults).forEach(([key, defaultValue]) => {
-                    const row = document.createElement('div');
-                    row.className = 'flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-900/70 px-2.5 py-2';
-
-                    const label = document.createElement('label');
-                    label.className = 'text-[10px] font-mono text-slate-400 w-24 text-left truncate flex-shrink-0';
-                    label.htmlFor = `custom-param-${key}`;
-                    label.textContent = key;
-
-                    const input = document.createElement('input');
-                    input.id = `custom-param-${key}`;
-                    input.type = 'number';
-                    input.step = 'any';
-                    input.value = values[key] ?? defaultValue;
-                    input.className = 'w-full bg-slate-950/80 border border-slate-700/80 text-white text-[10px] rounded-md px-2 py-1.5 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30';
-                    input.oninput = () => {
-                        const rawValue = Number(input.value);
-                        const nextValue = {
-                            ...window.RTPS_CUSTOM_PARAM_OVERRIDES,
-                            [key]: Number.isNaN(rawValue) ? defaultValue : rawValue
-                        };
-                        window._saveCustomParamValues(nextValue);
-                        window._applyCustomParamOverridesToGame(nextValue);
-                    };
-
-                    row.appendChild(label);
-                    row.appendChild(input);
-                    container.appendChild(row);
-                });
-            };
-
-            window.addEventListener('load', () => {
-                window._renderParamTestButtons();
-                window.renderCustomParamSettings();
-            });
    </script>
    <div class="w-full max-h-full overflow-y-auto flex justify-center items-center p-2" id="temp-map-screen">
     <div class="max-w-2xl w-full bg-slate-950/90 backdrop-blur-md p-5 md:p-6 rounded-3xl border border-blue-500/20 flex flex-col items-center pointer-events-auto shadow-2xl max-h-[85vh] my-auto">
